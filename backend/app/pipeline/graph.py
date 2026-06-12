@@ -1,16 +1,23 @@
 # @author zhangzhihao
-"""LangGraph 视频生成工作流骨架。"""
+"""LangGraph 视频生成工作流。"""
 
 from typing import TypedDict
 
 from langgraph.graph import END, StateGraph
+
+from app.services.image_service import ImageService
+from app.services.script_service import ScriptService
 
 
 class PipelineState(TypedDict, total=False):
     """Pipeline 全局状态。"""
 
     story: str
+    style: str
+    duration: int
+    aspect_ratio: str
     script: dict
+    image_urls: list
     assets: list
     keyframes: list
     video_clips: list
@@ -21,42 +28,96 @@ class PipelineState(TypedDict, total=False):
 
 async def script_node(state: PipelineState) -> PipelineState:
     """① 脚本 & 分镜（LLM）。"""
-    # TODO: 调用 LLMProvider 生成分镜
-    return {**state, "script": {"shots": []}, "current_step": "script"}
+    svc = ScriptService()
+    result = await svc.generate_script(
+        state.get("story", ""),
+        state.get("style", "cinematic"),
+        state.get("duration", 30),
+    )
+    script = {
+        "title": result.title,
+        "shots": [
+            {
+                "index": s.index,
+                "scene_cn": s.scene_cn,
+                "image_prompt_en": s.image_prompt_en,
+                "narration_cn": s.narration_cn,
+                "duration": s.duration,
+            }
+            for s in result.shots
+        ],
+    }
+    return {**state, "script": script, "current_step": "script"}
+
+
+async def image_node(state: PipelineState) -> PipelineState:
+    """② 逐镜头配图（M1 核心节点）。"""
+    from app.services.script_service import ShotData
+
+    script = state.get("script", {})
+    shots_raw = script.get("shots", [])
+    shots = [
+        ShotData(
+            index=item["index"],
+            scene_cn=item.get("scene_cn", ""),
+            image_prompt_en=item.get("image_prompt_en", ""),
+            narration_cn=item.get("narration_cn", ""),
+            duration=item.get("duration", 4),
+        )
+        for item in shots_raw
+    ]
+
+    svc = ImageService()
+    urls = await svc.generate_images(
+        shots,
+        state.get("style", "cinematic"),
+        state.get("aspect_ratio", "9:16"),
+    )
+    return {**state, "image_urls": urls, "current_step": "image"}
 
 
 async def asset_node(state: PipelineState) -> PipelineState:
-    """② 资产生成（角色/场景/道具图）。"""
-    # TODO: 调用 ImageProvider
+    """资产生成（角色/场景/道具图）— M1 占位。"""
     return {**state, "assets": [], "current_step": "asset"}
 
 
 async def keyframe_node(state: PipelineState) -> PipelineState:
-    """③ 关键帧生成。"""
-    # TODO: 调用 ImageProvider，注入资产上下文
+    """关键帧生成 — M1 占位。"""
     return {**state, "keyframes": [], "current_step": "keyframe"}
 
 
 async def video_node(state: PipelineState) -> PipelineState:
-    """④ 视频片段生成。"""
-    # TODO: 调用 VideoProvider
+    """视频片段生成 — M1 占位。"""
     return {**state, "video_clips": [], "current_step": "video"}
 
 
 async def tts_node(state: PipelineState) -> PipelineState:
-    """⑤ 配音（TTS）。"""
-    # TODO: 调用 TTSProvider
+    """配音（TTS）— M1 占位。"""
     return {**state, "audio": {}, "current_step": "tts"}
 
 
 async def compose_node(state: PipelineState) -> PipelineState:
-    """⑥ 合成成片（FFmpeg）。"""
-    # TODO: 片段 + 配音 + 字幕 + BGM 合成
-    return {**state, "output_url": "https://example.com/mock-output.mp4", "current_step": "compose"}
+    """合成成片（FFmpeg）— M1 占位。"""
+    return {
+        **state,
+        "output_url": "https://example.com/mock-output.mp4",
+        "current_step": "compose",
+    }
+
+
+def build_m1_pipeline():
+    """M1 精简工作流：script → image → END。"""
+    graph = StateGraph(PipelineState)
+    graph.add_node("script", script_node)
+    graph.add_node("image", image_node)
+    graph.set_entry_point("script")
+    graph.add_edge("script", "image")
+    graph.add_edge("image", END)
+    return graph.compile()
 
 
 def build_video_pipeline():
-    """构建 script → asset → keyframe → video → tts → compose 工作流。"""
+    """完整工作流：script → asset → keyframe → video → tts → compose。"""
     graph = StateGraph(PipelineState)
 
     graph.add_node("script", script_node)

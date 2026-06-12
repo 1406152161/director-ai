@@ -1,17 +1,39 @@
 # @author zhangzhihao
 """LLM Provider 占位实现。"""
 
+import json
+
+from app.core.config import Settings, get_settings
 from app.providers.base import Message
 
 
 class MockLLMProvider:
-    """返回 mock 分镜脚本，M1 接入真实 LLM API。"""
+    """返回 mock 分镜脚本，供本地开发与测试。"""
+
+    def __init__(self, settings: Settings | None = None) -> None:
+        self._settings = settings or get_settings()
 
     async def chat(self, messages: list[Message], **kwargs: object) -> str:
-        # TODO: 接入 DeepSeek / OpenAI 等厂商
         user_content = messages[-1].content if messages else ""
-        return (
-            f'{{"story": "{user_content}", "shots": ['
-            '{"id": 1, "narration": "开场", "visual": "远景镜头", "duration": 5}'
-            "]}"
+        return json.dumps(
+            {
+                "title": "Mock 短片",
+                "shots": [
+                    {
+                        "index": 1,
+                        "scene_cn": f"画面：{user_content[:30]}",
+                        "image_prompt_en": "cinematic wide shot, dramatic lighting",
+                        "narration_cn": "开场旁白",
+                        "duration": 4,
+                    },
+                    {
+                        "index": 2,
+                        "scene_cn": "特写镜头，情绪递进",
+                        "image_prompt_en": "close-up shot, soft lighting, emotional",
+                        "narration_cn": "第二镜旁白",
+                        "duration": 4,
+                    },
+                ],
+            },
+            ensure_ascii=False,
         )

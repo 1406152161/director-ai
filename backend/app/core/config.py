@@ -19,13 +19,22 @@ class Settings(BaseSettings):
     app_port: int = 8000
     frontend_url: str = "http://localhost:5173"
 
-    # Provider 选择（M0 占位，后续按厂商切换）
+    # Provider 选择
     llm_provider: str = "mock"
     image_provider: str = "mock"
     video_provider: str = "mock"
     tts_provider: str = "mock"
 
-    # 数据库与队列（M1+ 启用）
+    # Agnes AI
+    agnes_api_key: str = ""
+    agnes_api_base: str = "https://apihub.agnes-ai.com"
+    agnes_llm_model: str = "agnes-2.0-flash"
+    agnes_image_model: str = "agnes-image-2.1-flash"
+    agnes_video_model: str = "agnes-video-v2.0"
+    agnes_video_frame_rate: int = 24
+    agnes_video_max_frames: int = 441
+
+    # 数据库与队列
     database_url: str = "sqlite:///./director_ai.db"
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"

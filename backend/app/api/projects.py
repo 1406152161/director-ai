@@ -1,42 +1,40 @@
 # @author zhangzhihao
-"""项目 CRUD 占位路由。"""
+"""项目 API 路由。"""
 
-from uuid import uuid4
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-from fastapi import APIRouter
-
-from app.schemas.project import ProjectCreate, ProjectResponse
+from app.core.database import get_db
+from app.schemas.project import ProjectCreate, ProjectListItem, ProjectResponse
+from app.services.generation_service import run_generation
+from app.services.project_service import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
-# M0 内存占位，M1 接入数据库
-_projects: dict[str, ProjectResponse] = {}
 
-
-@router.get("", response_model=list[ProjectResponse])
-async def list_projects() -> list[ProjectResponse]:
-    return list(_projects.values())
+@router.get("", response_model=list[ProjectListItem])
+async def list_projects(db: Session = Depends(get_db)) -> list[ProjectListItem]:
+    svc = ProjectService(db)
+    projects = svc.list_projects()
+    return [svc.to_list_item(p) for p in projects]
 
 
 @router.post("", response_model=ProjectResponse, status_code=201)
-async def create_project(body: ProjectCreate) -> ProjectResponse:
-    project_id = str(uuid4())
-    project = ProjectResponse(
-        id=project_id,
-        story=body.story,
-        style=body.style,
-        duration=body.duration,
-        aspect_ratio=body.aspect_ratio,
-        status="pending",
-    )
-    _projects[project_id] = project
-    return project
+async def create_project(
+    body: ProjectCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> ProjectResponse:
+    svc = ProjectService(db)
+    project = svc.create_project(body)
+    background_tasks.add_task(run_generation, project.id)
+    return svc.to_response(project)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-async def get_project(project_id: str) -> ProjectResponse:
-    if project_id not in _projects:
-        from fastapi import HTTPException
-
+async def get_project(project_id: str, db: Session = Depends(get_db)) -> ProjectResponse:
+    svc = ProjectService(db)
+    project = svc.get_project(project_id)
+    if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
-    return _projects[project_id]
+    return svc.to_response(project)
