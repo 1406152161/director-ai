@@ -35,7 +35,8 @@ class Settings(BaseSettings):
     agnes_video_max_frames: int = 441
     agnes_video_poll_interval: float = 5.0
     agnes_video_timeout: float = 600.0
-    video_max_concurrency: int = 3
+    agnes_video_create_timeout: float = 120.0
+    video_max_concurrency: int = 2
 
     # TTS（Edge-TTS）
     tts_voice: str = "zh-CN-XiaoxiaoNeural"

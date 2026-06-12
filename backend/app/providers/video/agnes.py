@@ -18,6 +18,10 @@ from app.providers.exceptions import (
 
 logger = logging.getLogger(__name__)
 
+# 创建请求最多重试 3 次（共 4 次尝试），退避 2s / 4s / 8s
+_CREATE_MAX_ATTEMPTS = 4
+_CREATE_BACKOFF_BASE = 2.0
+
 
 class AgnesVideoProvider:
     """调用 Agnes 图生视频 API：创建任务 + 轮询成片 URL。"""
@@ -45,7 +49,7 @@ class AgnesVideoProvider:
         width: int,
         height: int,
     ) -> str:
-        """创建视频任务，返回 video_id。"""
+        """创建视频任务，返回 video_id（单次请求，不含重试）。"""
         payload = {
             "model": self._settings.agnes_video_model,
             "prompt": prompt,
@@ -63,8 +67,9 @@ class AgnesVideoProvider:
             frame_rate,
         )
 
+        timeout = self._settings.agnes_video_create_timeout
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(url, json=payload, headers=self._headers)
         except httpx.TimeoutException as exc:
             raise ProviderTimeoutError("Agnes Video 创建请求超时") from exc
@@ -86,6 +91,48 @@ class AgnesVideoProvider:
         if not video_id:
             raise ProviderError(f"Agnes Video 响应缺少 video_id: {data}")
         return str(video_id)
+
+    def _is_create_retryable(self, exc: Exception) -> bool:
+        """创建阶段可重试：超时或 httpx 网络类 ProviderError。"""
+        if isinstance(exc, ProviderTimeoutError):
+            return True
+        return isinstance(exc, ProviderError) and "网络错误" in str(exc)
+
+    async def _create_video_with_retry(
+        self,
+        image_url: str,
+        prompt: str,
+        num_frames: int,
+        frame_rate: int,
+        width: int,
+        height: int,
+    ) -> str:
+        """创建视频任务，遇超时/网络错误时指数退避重试。"""
+        last_exc: Exception | None = None
+        for attempt in range(_CREATE_MAX_ATTEMPTS):
+            try:
+                return await self._create_video(
+                    image_url, prompt, num_frames, frame_rate, width, height
+                )
+            except (ProviderAuthError, ProviderBadRequestError):
+                raise
+            except Exception as exc:
+                if not self._is_create_retryable(exc):
+                    raise
+                last_exc = exc
+                if attempt == _CREATE_MAX_ATTEMPTS - 1:
+                    break
+                delay = _CREATE_BACKOFF_BASE ** (attempt + 1)
+                logger.warning(
+                    "Agnes Video 创建第 %d 次失败，%ss 后重试: %s",
+                    attempt + 1,
+                    delay,
+                    exc,
+                )
+                await asyncio.sleep(delay)
+
+        assert last_exc is not None
+        raise last_exc
 
     async def _poll_video(self, video_id: str) -> str:
         """轮询直到 completed，返回 remixed_from_video_id（成片 URL）。"""
@@ -142,7 +189,7 @@ class AgnesVideoProvider:
     async def image_to_video(
         self, image_url: str, prompt: str, duration: int, **kwargs: object
     ) -> VideoResult:
-        """图生视频：创建 → 轮询 → 返回成片 URL。失败自动重试一次。"""
+        """图生视频：创建（含重试）→ 轮询 → 返回成片 URL。"""
         frame_rate = int(kwargs.get("frame_rate", self._settings.agnes_video_frame_rate))
         max_frames = int(kwargs.get("max_frames", self._settings.agnes_video_max_frames))
         num_frames = int(
@@ -159,20 +206,8 @@ class AgnesVideoProvider:
             aspect_ratio = str(kwargs.get("aspect_ratio", "9:16"))
             width, height = aspect_to_video_size(aspect_ratio)
 
-        last_exc: Exception | None = None
-        for attempt in range(2):
-            try:
-                video_id = await self._create_video(
-                    image_url, prompt, num_frames, frame_rate, width, height
-                )
-                url = await self._poll_video(video_id)
-                return VideoResult(url=url, duration=duration)
-            except (ProviderAuthError, ProviderBadRequestError, ProviderTimeoutError):
-                raise
-            except Exception as exc:
-                last_exc = exc
-                logger.warning(
-                    "Agnes Video 第 %d 次尝试失败: %s", attempt + 1, exc
-                )
-
-        raise ProviderError(f"Agnes Video 重试后仍失败: {last_exc}") from last_exc
+        video_id = await self._create_video_with_retry(
+            image_url, prompt, num_frames, frame_rate, width, height
+        )
+        url = await self._poll_video(video_id)
+        return VideoResult(url=url, duration=duration)

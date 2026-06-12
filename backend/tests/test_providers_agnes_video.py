@@ -228,3 +228,160 @@ class TestAgnesVideoProvider:
         provider = AgnesVideoProvider(video_settings)
         with pytest.raises(ProviderTimeoutError):
             await provider.image_to_video("https://img/1.png", "prompt", 5)
+
+    @pytest.mark.asyncio
+    async def test_create_timeout_retry_success(self, video_settings, monkeypatch):
+        """创建首次超时，退避重试后成功。"""
+        create_count = 0
+        sleep_delays: list[float] = []
+
+        class MockResponse:
+            def __init__(self, status_code, data=None):
+                self.status_code = status_code
+                self._data = data or {}
+
+            def json(self):
+                return self._data
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def post(self, *args, **kwargs):
+                nonlocal create_count
+                create_count += 1
+                if create_count == 1:
+                    raise httpx.ReadTimeout("read timed out")
+                return MockResponse(200, {"id": "v-retry-ok"})
+
+            async def get(self, *args, **kwargs):
+                return MockResponse(
+                    200,
+                    {
+                        "status": "completed",
+                        "remixed_from_video_id": "https://cdn.example/retry.mp4",
+                    },
+                )
+
+        async def mock_sleep(delay):
+            sleep_delays.append(delay)
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: MockClient())
+        monkeypatch.setattr(asyncio, "sleep", mock_sleep)
+
+        provider = AgnesVideoProvider(video_settings)
+        result = await provider.image_to_video("https://img/1.png", "prompt", 5)
+
+        assert result.url == "https://cdn.example/retry.mp4"
+        assert create_count == 2
+        assert sleep_delays == [2.0]
+
+    @pytest.mark.asyncio
+    async def test_create_auth_no_retry(self, video_settings, monkeypatch):
+        """401 认证失败不重试。"""
+        create_count = 0
+
+        class MockResponse:
+            status_code = 401
+            text = "Unauthorized"
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def post(self, *args, **kwargs):
+                nonlocal create_count
+                create_count += 1
+                return MockResponse()
+
+        async def fail_sleep(_):
+            raise AssertionError("认证失败不应触发退避 sleep")
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: MockClient())
+        monkeypatch.setattr(asyncio, "sleep", fail_sleep)
+
+        provider = AgnesVideoProvider(video_settings)
+        with pytest.raises(ProviderAuthError):
+            await provider.image_to_video("https://img/1.png", "prompt", 5)
+        assert create_count == 1
+
+    @pytest.mark.asyncio
+    async def test_create_bad_request_no_retry(self, video_settings, monkeypatch):
+        """400 参数错误不重试。"""
+        create_count = 0
+
+        class MockResponse:
+            status_code = 400
+            text = "bad request"
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def post(self, *args, **kwargs):
+                nonlocal create_count
+                create_count += 1
+                return MockResponse()
+
+        async def fail_sleep(_):
+            raise AssertionError("参数错误不应触发退避 sleep")
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: MockClient())
+        monkeypatch.setattr(asyncio, "sleep", fail_sleep)
+
+        provider = AgnesVideoProvider(video_settings)
+        with pytest.raises(ProviderBadRequestError):
+            await provider.image_to_video("https://img/1.png", "prompt", 5)
+        assert create_count == 1
+
+    @pytest.mark.asyncio
+    async def test_poll_timeout_no_create_retry(self, video_settings, monkeypatch):
+        """轮询超时不重试创建请求。"""
+        create_count = 0
+
+        class MockResponse:
+            status_code = 200
+
+            def json(self):
+                return {"status": "queued"}
+
+        class CreateResponse:
+            status_code = 200
+
+            def json(self):
+                return {"id": "v1"}
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def post(self, *args, **kwargs):
+                nonlocal create_count
+                create_count += 1
+                return CreateResponse()
+
+            async def get(self, *args, **kwargs):
+                return MockResponse()
+
+        async def noop_sleep(_):
+            pass
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: MockClient())
+        monkeypatch.setattr(asyncio, "sleep", noop_sleep)
+
+        provider = AgnesVideoProvider(video_settings)
+        with pytest.raises(ProviderTimeoutError):
+            await provider.image_to_video("https://img/1.png", "prompt", 5)
+        assert create_count == 1
