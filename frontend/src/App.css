@@ -208,6 +208,8 @@
   background: #f0f0f0;
 }
 
+.status-videoing,
+.status-synthesizing,
 .status-scripting,
 .status-imaging,
 .status-pending {
@@ -284,6 +286,47 @@
   color: #666;
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+.output-preview {
+  margin-bottom: 2rem;
+}
+
+.output-video {
+  width: 100%;
+  max-height: 640px;
+  border-radius: 12px;
+  background: #000;
+}
+
+.download-btn {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  background: #6c5ce7;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.download-btn:hover {
+  opacity: 0.9;
+}
+
+.shot-video {
+  width: 100%;
+  max-height: 320px;
+  background: #000;
+}
+
+.clip-badge {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: #2e7d32;
+  background: #e8f5e9;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
 }
 
 .project-card {

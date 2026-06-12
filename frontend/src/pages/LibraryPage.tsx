@@ -9,6 +9,8 @@ const STATUS_LABEL: Record<string, string> = {
   pending: '排队中',
   scripting: '脚本生成中',
   imaging: '配图生成中',
+  videoing: '视频生成中',
+  synthesizing: '合成中',
   completed: '已完成',
   failed: '失败',
 };

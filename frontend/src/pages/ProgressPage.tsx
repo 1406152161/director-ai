@@ -5,10 +5,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { fetchProject } from '../api/client';
 
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+
 const STATUS_LABEL: Record<string, string> = {
   pending: '排队中',
   scripting: '脚本生成中',
   imaging: '配图生成中',
+  videoing: '视频生成中',
+  synthesizing: '合成中',
   completed: '已完成',
   failed: '生成失败',
 };
@@ -47,13 +51,25 @@ function ProgressPage() {
   }
 
   const statusLabel = STATUS_LABEL[project.status] ?? project.status;
-  const completedShots = project.shots.filter((s) => s.image_url).length;
   const totalShots = project.shots.length;
+  const completedImages = project.shots.filter((s) => s.image_url).length;
+  const completedVideos = project.shots.filter((s) => s.video_url).length;
+  const completedClips = project.shots.filter((s) => s.clip_status === 'completed').length;
 
-  const progressHint =
-    project.status === 'imaging' && totalShots > 0
-      ? `配图 ${completedShots}/${totalShots}`
-      : statusLabel;
+  let progressHint = statusLabel;
+  if (project.status === 'imaging' && totalShots > 0) {
+    progressHint = `配图 ${completedImages}/${totalShots}`;
+  } else if (project.status === 'videoing' && totalShots > 0) {
+    progressHint = `视频 ${completedVideos}/${totalShots}`;
+  } else if (project.status === 'synthesizing' && totalShots > 0) {
+    progressHint = `合成 ${completedClips}/${totalShots}`;
+  }
+
+  const outputSrc = project.output_url
+    ? project.output_url.startsWith('http')
+      ? project.output_url
+      : `${API_BASE}${project.output_url}`
+    : null;
 
   return (
     <section className="page progress-page">
@@ -78,11 +94,35 @@ function ProgressPage() {
 
       {project.status === 'imaging' && totalShots > 0 && (
         <p className="placeholder-hint">
-          正在为 {totalShots} 个镜头生成竖屏配图（{completedShots}/{totalShots}）…
+          正在为 {totalShots} 个镜头生成竖屏配图（{completedImages}/{totalShots}）…
         </p>
       )}
 
-      {project.status === 'completed' && project.shots.length > 0 && (
+      {project.status === 'videoing' && totalShots > 0 && (
+        <p className="placeholder-hint">
+          正在生成视频与旁白（{completedVideos}/{totalShots}）…
+        </p>
+      )}
+
+      {project.status === 'synthesizing' && totalShots > 0 && (
+        <p className="placeholder-hint">
+          正在合成镜头片段（{completedClips}/{totalShots}）…
+        </p>
+      )}
+
+      {project.status === 'completed' && outputSrc && (
+        <div className="output-preview">
+          <h2>成片预览</h2>
+          <video controls className="output-video" src={outputSrc}>
+            您的浏览器不支持视频播放
+          </video>
+          <a href={outputSrc} download className="download-btn">
+            下载成片
+          </a>
+        </div>
+      )}
+
+      {project.shots.length > 0 && (
         <div className="storyboard-result">
           <h2>分镜卡片</h2>
           <div className="shot-grid">
@@ -97,8 +137,18 @@ function ProgressPage() {
                 ) : (
                   <div className="shot-image-placeholder">暂无配图</div>
                 )}
+                {shot.video_url && (
+                  <video
+                    controls
+                    className="shot-video"
+                    src={shot.video_url.startsWith('http') ? shot.video_url : `${API_BASE}${shot.video_url}`}
+                  />
+                )}
                 <div className="shot-info">
                   <span className="shot-index">镜头 {shot.index}</span>
+                  {shot.clip_status === 'completed' && (
+                    <span className="clip-badge">已合成</span>
+                  )}
                   <p className="shot-scene">{shot.scene_cn}</p>
                   <p className="shot-narration">{shot.narration_cn}</p>
                 </div>

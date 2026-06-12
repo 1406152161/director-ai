@@ -20,9 +20,14 @@ export interface ShotResponse {
   index: number;
   scene_cn: string;
   image_prompt_en: string;
+  motion_prompt_en: string;
   narration_cn: string;
   duration: number;
   image_url: string | null;
+  video_url: string | null;
+  audio_url: string | null;
+  clip_url: string | null;
+  clip_status: string;
   status: string;
 }
 
@@ -36,6 +41,7 @@ export interface ProjectResponse {
   progress: number;
   title: string | null;
   error: string | null;
+  output_url: string | null;
   created_at: string | null;
   shots: ShotResponse[];
 }
