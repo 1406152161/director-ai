@@ -4,24 +4,64 @@
 import json
 import re
 
+_PREVIEW_LEN = 500
+
+# 剥离思考/推理标签（含多行）
+_THINKING_TAG_PATTERN = re.compile(
+    r"<(?:redacted_)?thinking>[\s\S]*?</(?:redacted_)?thinking>",
+    re.IGNORECASE,
+)
+
+# markdown 代码块
+_CODE_FENCE_PATTERN = re.compile(
+    r"```(?:json)?\s*([\s\S]*?)\s*```",
+    re.IGNORECASE,
+)
+
+# 对象/数组内尾随逗号
+_TRAILING_COMMA_PATTERN = re.compile(r",\s*([}\]])")
+
+
+def _preview(text: str) -> str:
+    return text[:_PREVIEW_LEN]
+
+
+def _strip_thinking_tags(text: str) -> str:
+    return _THINKING_TAG_PATTERN.sub("", text).strip()
+
+
+def _extract_json_candidate(text: str) -> str | None:
+    """优先从代码块提取 JSON，否则回退到首尾花括号截取。"""
+    fence_match = _CODE_FENCE_PATTERN.search(text)
+    if fence_match:
+        return fence_match.group(1).strip()
+
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    return text[start : end + 1]
+
+
+def _remove_trailing_commas(json_str: str) -> str:
+    return _TRAILING_COMMA_PATTERN.sub(r"\1", json_str)
+
 
 def parse_json_from_llm(text: str) -> dict:
     """从 LLM 原始文本中提取并解析 JSON 对象。
 
-    支持去除 markdown ```json 代码块包裹与首尾噪声。
+    支持剥离推理标签、markdown 代码块包裹、尾随逗号与首尾噪声。
     """
-    cleaned = text.strip()
+    cleaned = _strip_thinking_tags(text.strip())
+    candidate = _extract_json_candidate(cleaned)
 
-    # 剥离 ```json ... ``` 或 ``` ... ``` 包裹
-    fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned, re.IGNORECASE)
-    if fence_match:
-        cleaned = fence_match.group(1).strip()
+    if candidate is None:
+        raise ValueError(f"未找到有效的 JSON 对象。原始文本片段: {_preview(text)}")
 
-    # 截取首个 { 到最后一个 } 之间的内容
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        raise ValueError("未找到有效的 JSON 对象")
-
-    json_str = cleaned[start : end + 1]
-    return json.loads(json_str)
+    json_str = _remove_trailing_commas(candidate)
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"JSON 解析失败: {exc}。原始文本片段: {_preview(text)}"
+        ) from exc

@@ -1,12 +1,20 @@
 # @author zhangzhihao
 """分镜脚本生成服务。"""
 
+import logging
 from dataclasses import dataclass
 
 from app.core.constants import duration_to_shot_count, style_to_prompt
 from app.providers.base import LLMProvider, Message
 from app.providers.registry import get_llm_provider
 from app.utils.json_parse import parse_json_from_llm
+
+logger = logging.getLogger(__name__)
+
+_RETRY_HINT = (
+    "上次输出不是合法 JSON，请只输出严格合法的 JSON 对象，"
+    "不要包含任何解释、思考或代码块标记"
+)
 
 
 @dataclass
@@ -74,6 +82,13 @@ class ScriptService:
     def __init__(self, llm: LLMProvider | None = None) -> None:
         self._llm = llm or get_llm_provider()
 
+    async def _request_script(self, messages: list[Message]) -> str:
+        return await self._llm.chat(
+            messages,
+            temperature=0.7,
+            max_tokens=8192,
+        )
+
     async def generate_script(
         self, story: str, style: str, duration: int
     ) -> ScriptResult:
@@ -85,14 +100,20 @@ class ScriptService:
             Message(role="user", content=prompt),
         ]
 
-        raw = await self._llm.chat(
-            messages,
-            enable_thinking=True,
-            temperature=0.7,
-            max_tokens=4096,
-        )
+        raw = await self._request_script(messages)
+        try:
+            data = parse_json_from_llm(raw)
+        except ValueError as first_exc:
+            logger.warning("分镜 JSON 首次解析失败，将重试: %s", first_exc)
+            messages.append(Message(role="assistant", content=raw))
+            messages.append(Message(role="user", content=_RETRY_HINT))
+            raw = await self._request_script(messages)
+            try:
+                data = parse_json_from_llm(raw)
+            except ValueError as retry_exc:
+                logger.error("分镜 JSON 解析失败，原始输出片段: %s", raw[:500])
+                raise retry_exc
 
-        data = parse_json_from_llm(raw)
         title = data.get("title", "未命名短片")
         shots_raw = data.get("shots", [])
 
