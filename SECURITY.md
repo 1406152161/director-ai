@@ -13,7 +13,7 @@
 
 请通过以下方式私下报告：
 
-1. 在 GitHub 仓库使用 **Security → Report a vulnerability**（若已启用）。
+1. 在 GitHub 仓库使用 **Security → Report a vulnerability** 提交私有报告（**已启用**）。
 2. 或通过仓库维护者的私有渠道联系。
 
 ### 报告应包含
