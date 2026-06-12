@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 验证必要文件存在
         run: |
@@ -50,7 +50,7 @@ jobs:
         working-directory: backend
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 设置 Python
         uses: actions/setup-python@v5
@@ -74,7 +74,7 @@ jobs:
         working-directory: frontend
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 设置 Node.js
         uses: actions/setup-node@v4
