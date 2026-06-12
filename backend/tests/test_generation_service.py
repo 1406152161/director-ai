@@ -1,5 +1,5 @@
 # @author zhangzhihao
-"""生成编排集成测试（mock Provider）。"""
+"""生成编排集成测试（mock Provider / TTS / FFmpeg）。"""
 
 import time
 
@@ -47,9 +47,16 @@ async def test_full_pipeline_pending_to_completed(gen_session_factory, monkeypat
     assert result.status == "completed"
     assert result.progress == 100
     assert result.title == "Mock 短片"
+    assert result.output_url
+    assert "/outputs/" in result.output_url
     assert len(result.shots) == 2
     for shot in result.shots:
         assert shot.image_url
+        assert shot.video_url
+        assert shot.audio_url
+        assert shot.clip_url
+        assert shot.clip_status == "completed"
+        assert shot.motion_prompt_en
         assert shot.status == "completed"
 
 
@@ -68,7 +75,7 @@ async def test_api_pipeline_with_background(client):
     assert response.status_code == 201
     project_id = response.json()["id"]
 
-    # 轮询等待后台任务（TestClient 会在请求结束后执行 BackgroundTasks）
+    data = None
     for _ in range(50):
         detail = client.get(f"/api/projects/{project_id}")
         assert detail.status_code == 200
@@ -77,7 +84,12 @@ async def test_api_pipeline_with_background(client):
             break
         time.sleep(0.1)
 
+    assert data is not None
     assert data["status"] == "completed"
     assert data["progress"] == 100
+    assert data["output_url"]
     assert len(data["shots"]) >= 1
     assert data["shots"][0]["image_url"]
+    assert data["shots"][0]["video_url"]
+    assert data["shots"][0]["audio_url"]
+    assert data["shots"][0]["clip_status"] == "completed"

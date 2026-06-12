@@ -26,6 +26,7 @@ class MarkdownMockLLM:
                             "index": 1,
                             "scene_cn": "雨夜霓虹街头",
                             "image_prompt_en": "orange cat in rainy tokyo street, neon lights",
+                            "motion_prompt_en": "slow tracking shot, cat walks through rain",
                             "narration_cn": "雨夜，一只橘猫穿行东京。",
                             "duration": 4,
                         }
@@ -81,6 +82,7 @@ def test_build_script_prompt_subject_constraints():
     prompt = _build_script_prompt("一个动漫版的橘猫走在东京街头", "cinematic", 15, 4)
 
     assert "主体保留" in prompt
+    assert "motion_prompt_en" in prompt
     assert "禁止把动物拟人化或替换成人类" in prompt
     assert "核心主体稳定描述" in prompt
     assert "风格优先级" in prompt
@@ -108,6 +110,7 @@ async def test_generate_script_markdown_tolerance():
     assert len(result.shots) == 1
     assert result.shots[0].scene_cn == "雨夜霓虹街头"
     assert "orange cat" in result.shots[0].image_prompt_en
+    assert result.shots[0].motion_prompt_en
     for kwargs in mock.calls_kwargs:
         assert "enable_thinking" not in kwargs
         assert kwargs.get("max_tokens") == 8192

@@ -6,6 +6,7 @@ import os
 # 必须在导入 app 之前设置，确保测试不依赖真实 API Key
 os.environ.setdefault("LLM_PROVIDER", "mock")
 os.environ.setdefault("IMAGE_PROVIDER", "mock")
+os.environ.setdefault("VIDEO_PROVIDER", "mock")
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 import app.models  # noqa: F401 — 注册 ORM 模型
@@ -20,6 +21,48 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
+
+
+@pytest.fixture(autouse=True)
+def _mock_m2_services(monkeypatch, request, tmp_path):
+    """非 e2e 测试 mock TTS/FFmpeg，避免网络与本地 ffmpeg 依赖。"""
+    if request.node.get_closest_marker("e2e"):
+        return
+
+    from app.services.tts_service import TTSSynthesisResult
+
+    class FakeTTSService:
+        async def synthesize(self, text, output_path, voice=None):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"fake-audio")
+            return TTSSynthesisResult(audio_path=output_path, duration=2.0)
+
+    class FakeFFmpegService:
+        def compose_shot_clip(
+            self, video_path, audio_path, narration_cn, output_path, target_duration
+        ):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"clip")
+            return output_path
+
+        def concat_clips(self, clip_paths, output_path):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"final")
+            return output_path
+
+    monkeypatch.setattr("app.services.generation_service.TTSService", FakeTTSService)
+    monkeypatch.setattr("app.services.generation_service.FFmpegService", FakeFFmpegService)
+    monkeypatch.setattr(
+        "app.services.generation_service._outputs_root",
+        lambda: tmp_path / "outputs",
+    )
+
+    async def fake_download(url: str, dest):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"fake-video")
+        return dest
+
+    monkeypatch.setattr("app.services.generation_service._download_file", fake_download)
 
 
 @pytest.fixture(autouse=True)

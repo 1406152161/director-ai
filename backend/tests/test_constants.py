@@ -27,7 +27,14 @@ def test_style_to_prompt_mapping():
 
 def test_duration_to_shot_count():
     assert duration_to_shot_count(15) == 4
-    assert duration_to_shot_count(30) == 8
-    assert duration_to_shot_count(60) == 8
-    assert duration_to_shot_count(120) == 8
+    assert duration_to_shot_count(30) == 6
+    assert duration_to_shot_count(60) == 6
+    assert duration_to_shot_count(120) == 6
     assert duration_to_shot_count(5) == 1
+
+
+def test_duration_to_num_frames():
+    from app.core.constants import duration_to_num_frames
+
+    assert duration_to_num_frames(5) == 121
+    assert duration_to_num_frames(3) == 81

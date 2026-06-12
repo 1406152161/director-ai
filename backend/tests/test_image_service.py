@@ -24,11 +24,12 @@ class CountingImageProvider:
 async def test_build_prompt_no_style_conflict():
     svc = ImageService(image_provider=CountingImageProvider())
     shot = ShotData(
-        1,
-        "橘猫街头",
-        "anime style, orange tabby cat walking Tokyo street, neon lights",
-        "旁白",
-        4,
+        index=1,
+        scene_cn="橘猫街头",
+        image_prompt_en="anime style, orange tabby cat walking Tokyo street, neon lights",
+        motion_prompt_en="slow tracking shot",
+        narration_cn="旁白",
+        duration=4,
     )
     prompt = svc._build_prompt(shot, "cinematic")
 
@@ -45,8 +46,8 @@ async def test_generate_images_for_shots():
     svc = ImageService(image_provider=provider)
 
     shots = [
-        ShotData(1, "场景1", "anime style, prompt one", "旁白1", 4),
-        ShotData(2, "场景2", "anime style, prompt two", "旁白2", 4),
+        ShotData(1, "场景1", "anime style, prompt one", "slow pan", "旁白1", 4),
+        ShotData(2, "场景2", "anime style, prompt two", "tracking shot", "旁白2", 4),
     ]
 
     progress_log: list[tuple[int, int]] = []
