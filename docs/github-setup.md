@@ -19,8 +19,11 @@
 | PR / Issue 模板 | ✅ 已配置 | 见 `.github/` 目录 |
 | CODEOWNERS | ✅ 已配置 | 自动指定 Review 负责人 |
 | FUNDING.yml | ✅ 已配置 | 赞助按钮 |
-| CI / Release 工作流 | ✅ 已配置 | 见 `.github/workflows/` |
-| GitHub Discussions | ⏸ 未开启 | 可选，社区规模扩大后启用 |
+| Actions 工作流权限 | ✅ 已配置 | Read and write（Release 工作流可正常创建 Release）|
+| 私有漏洞报告 | ✅ 已开启 | Security → Report a vulnerability |
+| GitHub Wiki | ✅ 已关闭 | 文档统一维护在 `docs/` 目录 |
+| GitHub Discussions | ✅ 已开启 | 社区讨论与 Q&A |
+| Issue 标签（type/priority）| ✅ 已配置 | type: feature/bug/docs 等 + priority 系列 |
 | frontend / backend 脚手架 | ⏸ 待技术栈确认 | 用户提供技术栈后初始化 |
 
 ## 1. 分支保护（Branch Protection）
@@ -55,10 +58,12 @@
 
 ## 3. Actions 权限
 
-路径：**Settings → Actions → General**
+| 配置项 | 状态 |
+|--------|------|
+| Workflow permissions | ✅ Read and write |
+| Release 工作流创建 Release | ✅ 可正常执行 |
 
-- **Workflow permissions**：需为 Read and write（Release 工作流创建 Release 时使用）
-- 若 Release 工作流失败，请检查此项是否为 Read and write
+路径：**Settings → Actions → General → Workflow permissions**
 
 ## 4. Dependabot
 
@@ -74,7 +79,7 @@
 |--------|------|
 | Secret scanning | ✅ |
 | Secret scanning push protection | ✅ |
-| Private vulnerability reporting | 配合 `SECURITY.md` 使用 |
+| Private vulnerability reporting | ✅ 已开启 |
 
 ## 6. 发布流程
 

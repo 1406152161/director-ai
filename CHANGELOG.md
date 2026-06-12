@@ -8,6 +8,7 @@
 ### 待办
 
 - 初始化 frontend / backend 脚手架（待技术栈确认）
+- 添加 commitlint + husky（代码起步后启用）
 
 ## [0.1.0] - 2026-06-12
 
