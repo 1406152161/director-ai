@@ -4,7 +4,7 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 
-from app.core.constants import aspect_to_size, style_to_prompt
+from app.core.constants import aspect_to_size
 from app.providers.base import ImageProvider
 from app.providers.registry import get_image_provider
 from app.services.script_service import ShotData
@@ -19,9 +19,12 @@ class ImageService:
     def __init__(self, image_provider: ImageProvider | None = None) -> None:
         self._image = image_provider or get_image_provider()
 
-    def _build_prompt(self, shot: ShotData, style: str) -> str:
-        style_words = style_to_prompt(style)
-        return f"{shot.image_prompt_en}, {style_words}"
+    def _build_prompt(self, shot: ShotData, _style: str) -> str:
+        # 风格已在分镜阶段写入 image_prompt_en，此处不再追加 style_to_prompt 以免与创意风格冲突
+        prompt = shot.image_prompt_en.strip()
+        if not prompt:
+            return "high detail"
+        return f"{prompt}, high detail"
 
     async def generate_images(
         self,

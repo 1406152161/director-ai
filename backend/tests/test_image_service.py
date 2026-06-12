@@ -12,10 +12,31 @@ class CountingImageProvider:
 
     def __init__(self):
         self.calls = 0
+        self.prompts: list[str] = []
 
     async def text_to_image(self, prompt: str, **kwargs: object) -> ImageResult:
         self.calls += 1
+        self.prompts.append(prompt)
         return ImageResult(url=f"https://mock/{self.calls}.png", prompt=prompt)
+
+
+@pytest.mark.asyncio
+async def test_build_prompt_no_style_conflict():
+    svc = ImageService(image_provider=CountingImageProvider())
+    shot = ShotData(
+        1,
+        "橘猫街头",
+        "anime style, orange tabby cat walking Tokyo street, neon lights",
+        "旁白",
+        4,
+    )
+    prompt = svc._build_prompt(shot, "cinematic")
+
+    assert "anime style" in prompt
+    assert "orange tabby cat" in prompt
+    assert "cinematic realism" not in prompt
+    assert "film still" not in prompt
+    assert prompt.endswith("high detail")
 
 
 @pytest.mark.asyncio
@@ -24,8 +45,8 @@ async def test_generate_images_for_shots():
     svc = ImageService(image_provider=provider)
 
     shots = [
-        ShotData(1, "场景1", "prompt one", "旁白1", 4),
-        ShotData(2, "场景2", "prompt two", "旁白2", 4),
+        ShotData(1, "场景1", "anime style, prompt one", "旁白1", 4),
+        ShotData(2, "场景2", "anime style, prompt two", "旁白2", 4),
     ]
 
     progress_log: list[tuple[int, int]] = []
@@ -39,3 +60,7 @@ async def test_generate_images_for_shots():
     assert provider.calls == 2
     assert all("mock" in url for url in urls)
     assert progress_log[-1] == (2, 2)
+    for sent_prompt in provider.prompts:
+        assert "anime style" in sent_prompt
+        assert "cinematic realism" not in sent_prompt
+        assert "film still" not in sent_prompt

@@ -29,7 +29,7 @@ def _build_script_prompt(story: str, style: str, duration: int, shot_count: int)
     return f"""你是一位专业短视频导演。请根据以下创意，生成结构化分镜脚本。
 
 创意：{story}
-视觉风格：{style}（英文提示词参考：{style_hint}）
+视觉风格参数：{style}（英文提示词参考：{style_hint}，仅当创意未明确风格时使用）
 目标时长：约 {duration} 秒
 镜头数量：{shot_count} 个（每镜约 4 秒）
 
@@ -52,6 +52,19 @@ def _build_script_prompt(story: str, style: str, duration: int, shot_count: int)
 - image_prompt_en 使用英文，包含画面构图、光线、氛围
 - scene_cn 和 narration_cn 使用中文
 - index 从 1 开始连续编号
+
+【核心约束 — 必须严格遵守】
+1. 主体保留：必须严格保留创意中的核心主体、角色、物种、数量与风格，禁止替换。
+   - 禁止把动物拟人化或替换成人类（例：创意是「橘猫」，所有镜头主体必须是同一只橘猫，不能变成人）
+   - 禁止遗漏、替换或偷换创意中的关键主体
+2. 主体一致性锚点：先根据创意确定贯穿全片的「核心主体稳定描述」
+   （含物种、外观、关键特征）和「统一视觉风格」。
+   - 每个镜头的 image_prompt_en 都必须包含该核心主体的稳定外观描述，
+     确保跨镜头主角一致、不漂移
+3. 风格写入：每个 image_prompt_en 必须把视觉风格明确写入英文提示词
+   （如 anime style、cinematic 等），且必须与创意文字中的风格一致
+4. 风格优先级：创意中明确表达的风格（如「动漫版」「anime」「写实」等）为最高优先；
+   仅当创意未提及风格时，才参考上述视觉风格参数
 """
 
 
