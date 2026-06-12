@@ -18,9 +18,14 @@ class ShotResponse(BaseModel):
     index: int
     scene_cn: str
     image_prompt_en: str
+    motion_prompt_en: str = ""
     narration_cn: str
     duration: int
     image_url: str | None = None
+    video_url: str | None = None
+    audio_url: str | None = None
+    clip_url: str | None = None
+    clip_status: str = "pending"
     status: str
 
     model_config = {"from_attributes": True}
@@ -36,6 +41,7 @@ class ProjectResponse(BaseModel):
     progress: int = 0
     title: str | None = None
     error: str | None = None
+    output_url: str | None = None
     created_at: datetime | None = None
     shots: list[ShotResponse] = Field(default_factory=list)
 

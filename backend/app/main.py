@@ -2,15 +2,19 @@
 """FastAPI 应用入口。"""
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api import health, projects
 from app.core.config import get_settings
 from app.core.database import init_db
 
 settings = get_settings()
+outputs_path = Path(settings.outputs_dir)
+outputs_path.mkdir(parents=True, exist_ok=True)
 
 
 @asynccontextmanager
@@ -35,6 +39,7 @@ app.add_middleware(
 
 app.include_router(health.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
+app.mount("/outputs", StaticFiles(directory=str(outputs_path)), name="outputs")
 
 
 @app.get("/")

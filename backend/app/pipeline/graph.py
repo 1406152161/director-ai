@@ -41,6 +41,7 @@ async def script_node(state: PipelineState) -> PipelineState:
                 "index": s.index,
                 "scene_cn": s.scene_cn,
                 "image_prompt_en": s.image_prompt_en,
+                "motion_prompt_en": s.motion_prompt_en,
                 "narration_cn": s.narration_cn,
                 "duration": s.duration,
             }
@@ -61,6 +62,7 @@ async def image_node(state: PipelineState) -> PipelineState:
             index=item["index"],
             scene_cn=item.get("scene_cn", ""),
             image_prompt_en=item.get("image_prompt_en", ""),
+            motion_prompt_en=item.get("motion_prompt_en", ""),
             narration_cn=item.get("narration_cn", ""),
             duration=item.get("duration", 4),
         )

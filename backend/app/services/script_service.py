@@ -22,6 +22,7 @@ class ShotData:
     index: int
     scene_cn: str
     image_prompt_en: str
+    motion_prompt_en: str
     narration_cn: str
     duration: int
 
@@ -49,6 +50,7 @@ def _build_script_prompt(story: str, style: str, duration: int, shot_count: int)
       "index": 1,
       "scene_cn": "中文画面描述",
       "image_prompt_en": "english image prompt with style/lighting/composition",
+      "motion_prompt_en": "english motion prompt: camera movement, subject action",
       "narration_cn": "该镜头旁白文案",
       "duration": 4
     }}
@@ -58,6 +60,8 @@ def _build_script_prompt(story: str, style: str, duration: int, shot_count: int)
 要求：
 - shots 数组长度必须为 {shot_count}
 - image_prompt_en 使用英文，包含画面构图、光线、氛围
+- motion_prompt_en 使用英文，描述镜头运动（如 slow pan、tracking shot）、
+  主体动作与镜头语言，保持主体与 image_prompt_en 一致
 - scene_cn 和 narration_cn 使用中文
 - index 从 1 开始连续编号
 
@@ -124,6 +128,7 @@ class ScriptService:
                     index=item.get("index", i + 1),
                     scene_cn=item.get("scene_cn", ""),
                     image_prompt_en=item.get("image_prompt_en", ""),
+                    motion_prompt_en=item.get("motion_prompt_en", ""),
                     narration_cn=item.get("narration_cn", ""),
                     duration=item.get("duration", 4),
                 )

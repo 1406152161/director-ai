@@ -28,6 +28,7 @@ class Project(Base):
     progress: Mapped[int] = mapped_column(Integer, default=0)
     title: Mapped[str | None] = mapped_column(String(256), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    output_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     shots: Mapped[list["Shot"]] = relationship(
@@ -45,9 +46,14 @@ class Shot(Base):
     index: Mapped[int] = mapped_column(Integer, nullable=False)
     scene_cn: Mapped[str] = mapped_column(Text, default="")
     image_prompt_en: Mapped[str] = mapped_column(Text, default="")
+    motion_prompt_en: Mapped[str] = mapped_column(Text, default="")
     narration_cn: Mapped[str] = mapped_column(Text, default="")
     duration: Mapped[int] = mapped_column(Integer, default=4)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    video_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    clip_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    clip_status: Mapped[str] = mapped_column(String(16), default="pending")
     status: Mapped[str] = mapped_column(String(16), default="pending")
 
     project: Mapped["Project"] = relationship("Project", back_populates="shots")

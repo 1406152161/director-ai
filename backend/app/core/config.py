@@ -33,6 +33,16 @@ class Settings(BaseSettings):
     agnes_video_model: str = "agnes-video-v2.0"
     agnes_video_frame_rate: int = 24
     agnes_video_max_frames: int = 441
+    agnes_video_poll_interval: float = 5.0
+    agnes_video_timeout: float = 600.0
+    video_max_concurrency: int = 3
+
+    # TTS（Edge-TTS）
+    tts_voice: str = "zh-CN-XiaoxiaoNeural"
+
+    # 本地输出与 FFmpeg
+    outputs_dir: str = "outputs"
+    ffmpeg_font_path: str = ""
 
     # 数据库与队列
     database_url: str = "sqlite:///./director_ai.db"

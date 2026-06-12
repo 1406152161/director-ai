@@ -23,6 +23,9 @@ class MockLLMProvider:
                         "index": 1,
                         "scene_cn": f"画面：{user_content[:30]}",
                         "image_prompt_en": "cinematic wide shot, dramatic lighting",
+                        "motion_prompt_en": (
+                            "slow pan, gentle camera movement, subject walks forward"
+                        ),
                         "narration_cn": "开场旁白",
                         "duration": 4,
                     },
@@ -30,6 +33,7 @@ class MockLLMProvider:
                         "index": 2,
                         "scene_cn": "特写镜头，情绪递进",
                         "image_prompt_en": "close-up shot, soft lighting, emotional",
+                        "motion_prompt_en": "slow zoom in, subtle subject movement, cinematic",
                         "narration_cn": "第二镜旁白",
                         "duration": 4,
                     },

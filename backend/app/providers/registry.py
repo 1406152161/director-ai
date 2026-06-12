@@ -8,6 +8,7 @@ from app.providers.image.mock import MockImageProvider
 from app.providers.llm.agnes import AgnesLLMProvider
 from app.providers.llm.mock import MockLLMProvider
 from app.providers.tts.mock import MockTTSProvider
+from app.providers.video.agnes import AgnesVideoProvider
 from app.providers.video.mock import MockVideoProvider
 
 _LLM_REGISTRY: dict[str, type] = {
@@ -22,6 +23,7 @@ _IMAGE_REGISTRY: dict[str, type] = {
 
 _VIDEO_REGISTRY: dict[str, type] = {
     "mock": MockVideoProvider,
+    "agnes": AgnesVideoProvider,
 }
 
 _TTS_REGISTRY: dict[str, type] = {
