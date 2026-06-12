@@ -39,11 +39,21 @@ def _mock_m2_services(monkeypatch, request, tmp_path):
 
     class FakeFFmpegService:
         def compose_shot_clip(
-            self, video_path, audio_path, narration_cn, output_path, target_duration
+            self,
+            video_path,
+            audio_path,
+            narration_cn,
+            output_path,
+            target_duration,
+            target_width,
+            target_height,
         ):
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(b"clip")
             return output_path
+
+        def probe_duration(self, media_path, fallback=0.0):
+            return fallback
 
         def concat_clips(self, clip_paths, output_path):
             output_path.parent.mkdir(parents=True, exist_ok=True)

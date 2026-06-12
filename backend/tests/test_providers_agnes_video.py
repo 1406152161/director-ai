@@ -67,7 +67,11 @@ class TestAgnesVideoProvider:
                 captured["create_url"] = url
                 captured["create_json"] = json
                 captured["headers"] = headers
-                return MockResponse(200, {"id": "vid-123"})
+                return MockResponse(200, {
+                    "id": "task_abc123",
+                    "task_id": "task_abc123",
+                    "video_id": "video_xyz789",
+                })
 
             async def get(self, url, params=None, headers=None):
                 nonlocal poll_count
@@ -92,7 +96,10 @@ class TestAgnesVideoProvider:
 
         provider = AgnesVideoProvider(video_settings)
         result = await provider.image_to_video(
-            "https://img.example/1.png", "slow pan shot", duration=5
+            "https://img.example/1.png",
+            "slow pan shot",
+            duration=5,
+            aspect_ratio="9:16",
         )
 
         assert result.url == "https://cdn.example/final.mp4"
@@ -103,7 +110,9 @@ class TestAgnesVideoProvider:
         assert body["image"] == "https://img.example/1.png"
         assert body["num_frames"] == 121
         assert body["frame_rate"] == 24
-        assert captured["poll_params"]["video_id"] == "vid-123"
+        assert body["width"] == 768
+        assert body["height"] == 1344
+        assert captured["poll_params"]["video_id"] == "video_xyz789"
 
     @pytest.mark.asyncio
     async def test_poll_failed_status(self, video_settings, monkeypatch):

@@ -7,7 +7,7 @@ import logging
 import httpx
 
 from app.core.config import Settings, get_settings
-from app.core.constants import duration_to_num_frames
+from app.core.constants import aspect_to_video_size, duration_to_num_frames
 from app.providers.base import VideoResult
 from app.providers.exceptions import (
     ProviderAuthError,
@@ -42,6 +42,8 @@ class AgnesVideoProvider:
         prompt: str,
         num_frames: int,
         frame_rate: int,
+        width: int,
+        height: int,
     ) -> str:
         """创建视频任务，返回 video_id。"""
         payload = {
@@ -50,6 +52,8 @@ class AgnesVideoProvider:
             "image": image_url,
             "num_frames": num_frames,
             "frame_rate": frame_rate,
+            "width": width,
+            "height": height,
         }
         url = f"{self._api_base}/v1/videos"
         logger.info(
@@ -77,7 +81,8 @@ class AgnesVideoProvider:
             )
 
         data = response.json()
-        video_id = data.get("id") or data.get("video_id")
+        # 轮询端点需要 video_id，创建响应中 id 常为 task_id
+        video_id = data.get("video_id") or data.get("id") or data.get("task_id")
         if not video_id:
             raise ProviderError(f"Agnes Video 响应缺少 video_id: {data}")
         return str(video_id)
@@ -146,12 +151,19 @@ class AgnesVideoProvider:
                 duration_to_num_frames(duration, frame_rate, max_frames),
             )
         )
+        width_kw = kwargs.get("width")
+        height_kw = kwargs.get("height")
+        if width_kw is not None and height_kw is not None:
+            width, height = int(width_kw), int(height_kw)
+        else:
+            aspect_ratio = str(kwargs.get("aspect_ratio", "9:16"))
+            width, height = aspect_to_video_size(aspect_ratio)
 
         last_exc: Exception | None = None
         for attempt in range(2):
             try:
                 video_id = await self._create_video(
-                    image_url, prompt, num_frames, frame_rate
+                    image_url, prompt, num_frames, frame_rate, width, height
                 )
                 url = await self._poll_video(video_id)
                 return VideoResult(url=url, duration=duration)

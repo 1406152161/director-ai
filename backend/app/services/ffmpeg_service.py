@@ -30,6 +30,28 @@ class FFmpegService:
             )
         return ffmpeg
 
+    def probe_duration(self, media_path: Path, fallback: float = 0.0) -> float:
+        """用 ffprobe 探测媒体时长（秒），失败时回退 fallback。"""
+        ffprobe = shutil.which("ffprobe")
+        if not ffprobe or not media_path.exists():
+            return fallback
+        try:
+            result = subprocess.run(
+                [
+                    ffprobe,
+                    "-v", "error",
+                    "-show_entries", "format=duration",
+                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    str(media_path),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return max(0.0, float(result.stdout.strip()))
+        except (subprocess.CalledProcessError, ValueError):
+            return fallback
+
     def _font_path(self) -> str | None:
         if self._settings.ffmpeg_font_path:
             return self._settings.ffmpeg_font_path
@@ -61,17 +83,24 @@ class FFmpegService:
         narration_cn: str,
         output_path: Path,
         target_duration: float,
+        target_width: int,
+        target_height: int,
     ) -> Path:
-        """单镜合成：视频 + 配音 + 硬字幕，时长对齐。"""
+        """单镜合成：统一分辨率 + 视频 + 配音 + 硬字幕，时长对齐。"""
         ffmpeg = self._ensure_ffmpeg()
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         srt_path = output_path.with_suffix(".srt")
         self._write_srt(narration_cn, target_duration, srt_path)
 
-        # 时长对齐：取 max(视频, 音频)；视频不足定格末帧，音频不足静音补足
+        # 统一分辨率后时长对齐：视频不足定格末帧，音频不足静音补足
         filter_parts = [
-            f"[0:v]tpad=stop_mode=clone:stop_duration={target_duration}[vpad]",
+            (
+                f"[0:v]scale={target_width}:{target_height}:"
+                f"force_original_aspect_ratio=decrease,"
+                f"pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2,"
+                f"tpad=stop_mode=clone:stop_duration={target_duration}[vpad]"
+            ),
             f"[1:a]apad=whole_dur={target_duration}[apad]",
         ]
 

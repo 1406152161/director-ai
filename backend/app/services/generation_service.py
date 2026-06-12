@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 
 from app.core.config import get_settings
+from app.core.constants import aspect_to_video_size
 from app.core.database import SessionLocal
 from app.models.project import Shot
 from app.providers.registry import get_video_provider
@@ -105,6 +106,7 @@ async def run_generation(project_id: str) -> None:
                         shot.image_url or "",
                         motion,
                         shot.duration,
+                        aspect_ratio=project.aspect_ratio,
                     )
                     audio_path = shot_dir / "narration.mp3"
                     tts_task = tts_svc.synthesize(shot.narration_cn, audio_path)
@@ -135,13 +137,17 @@ async def run_generation(project_id: str) -> None:
             # ④ FFmpeg 单镜合成 + 拼接
             project_svc.update_status(project_id, "synthesizing", 75)
             clip_paths: list[Path] = []
+            target_width, target_height = aspect_to_video_size(project.aspect_ratio)
 
             for shot in shots:
                 shot_dir = out_dir / f"shot_{shot.index}"
                 local_video = shot_dir / "raw_video.mp4"
                 audio_path = shot_dir / "narration.mp3"
                 clip_path = shot_dir / "clip.mp4"
-                target_duration = max(float(shot.duration), 1.0)
+                audio_duration = ffmpeg_svc.probe_duration(
+                    audio_path, fallback=float(shot.duration)
+                )
+                target_duration = max(float(shot.duration), audio_duration, 1.0)
 
                 ffmpeg_svc.compose_shot_clip(
                     local_video,
@@ -149,6 +155,8 @@ async def run_generation(project_id: str) -> None:
                     shot.narration_cn,
                     clip_path,
                     target_duration,
+                    target_width,
+                    target_height,
                 )
                 clip_paths.append(clip_path)
                 project_svc.save_shot_clip(

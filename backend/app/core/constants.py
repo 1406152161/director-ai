@@ -39,6 +39,16 @@ def aspect_to_size(aspect_ratio: str) -> str:
     return ASPECT_TO_SIZE.get(aspect_ratio, ASPECT_TO_SIZE["9:16"])
 
 
+def aspect_to_video_size(aspect_ratio: str) -> tuple[int, int]:
+    """版式转视频宽高（像素），未知版式回退竖屏 9:16。"""
+    mapping: dict[str, tuple[int, int]] = {
+        "9:16": (768, 1344),
+        "16:9": (1344, 768),
+        "1:1": (1024, 1024),
+    }
+    return mapping.get(aspect_ratio, mapping["9:16"])
+
+
 def style_to_prompt(style: str) -> str:
     """风格转英文提示词片段，未知风格回退电影感。"""
     return STYLE_TO_PROMPT.get(style, STYLE_TO_PROMPT["cinematic"])
