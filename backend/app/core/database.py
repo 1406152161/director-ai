@@ -28,7 +28,9 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """启动时建表。"""
+    """启动时建表并执行幂等迁移。"""
+    from app.core.migrate import run_migrations  # noqa: PLC0415
     from app.models import Base  # noqa: PLC0415 — 延迟导入避免循环依赖
 
     Base.metadata.create_all(bind=engine)
+    run_migrations(engine)

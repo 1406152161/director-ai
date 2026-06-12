@@ -103,3 +103,73 @@ def test_ffmpeg_not_found(ffmpeg_svc, monkeypatch, tmp_path):
             target_width=768,
             target_height=1344,
         )
+
+
+def test_extract_last_frame_command(ffmpeg_svc, monkeypatch, tmp_path):
+    monkeypatch.setattr("app.services.ffmpeg_service.shutil.which", lambda _: "/usr/bin/ffmpeg")
+    mock_run = MagicMock()
+    monkeypatch.setattr("app.services.ffmpeg_service.subprocess.run", mock_run)
+
+    video = tmp_path / "video.mp4"
+    output = tmp_path / "last.jpg"
+    video.write_bytes(b"fake")
+
+    ffmpeg_svc.extract_last_frame(video, output)
+
+    mock_run.assert_called_once()
+    cmd = mock_run.call_args[0][0]
+    assert "-sseof" in cmd
+    assert "-0.1" in cmd
+    assert "-frames:v" in cmd
+    assert "1" in cmd
+    assert str(output) in cmd
+
+
+def test_compute_xfade_offsets():
+    offsets = FFmpegService.compute_xfade_offsets([5.0, 5.0, 5.0], 0.4)
+    assert offsets == [4.6, 9.2]
+
+
+def test_concat_clips_xfade_command(ffmpeg_svc, monkeypatch, tmp_path):
+    monkeypatch.setattr("app.services.ffmpeg_service.shutil.which", lambda _: "/usr/bin/ffmpeg")
+    mock_run = MagicMock()
+    monkeypatch.setattr("app.services.ffmpeg_service.subprocess.run", mock_run)
+    monkeypatch.setattr(
+        "app.services.ffmpeg_service.FFmpegService.probe_duration",
+        lambda self, p, fallback=0.0: 5.0,
+    )
+
+    clip1 = tmp_path / "c1.mp4"
+    clip2 = tmp_path / "c2.mp4"
+    clip1.write_bytes(b"fake")
+    clip2.write_bytes(b"fake")
+    output = tmp_path / "final.mp4"
+
+    ffmpeg_svc.concat_clips_xfade([clip1, clip2], output, xfade_duration=0.4)
+
+    mock_run.assert_called_once()
+    cmd = mock_run.call_args[0][0]
+    fc_idx = cmd.index("-filter_complex") + 1
+    filter_complex = cmd[fc_idx]
+    assert "xfade" in filter_complex
+    assert "offset=4.6" in filter_complex
+
+
+def test_build_continuous_audio_command(ffmpeg_svc, monkeypatch, tmp_path):
+    monkeypatch.setattr("app.services.ffmpeg_service.shutil.which", lambda _: "/usr/bin/ffmpeg")
+    mock_run = MagicMock()
+    monkeypatch.setattr("app.services.ffmpeg_service.subprocess.run", mock_run)
+
+    a1 = tmp_path / "1.mp3"
+    a2 = tmp_path / "2.mp3"
+    a1.write_bytes(b"fake")
+    a2.write_bytes(b"fake")
+    output = tmp_path / "continuous.m4a"
+
+    ffmpeg_svc.build_continuous_audio([a1, a2], output)
+
+    mock_run.assert_called_once()
+    cmd = mock_run.call_args[0][0]
+    fc_idx = cmd.index("-filter_complex") + 1
+    filter_complex = cmd[fc_idx]
+    assert "concat=n=2:v=0:a=1" in filter_complex

@@ -5,6 +5,20 @@
 
 ## [Unreleased]
 
+### 新增
+
+- **M3 资产一致性（M3b）**：脚本输出 `assets` 清单（角色/场景/道具），`AssetService` 文生图设定参考，关键帧 `image_to_image` 图生图
+- **M3 镜头连贯性（M3a）**：串行链式真实尾帧衔接、xfade 0.4s 交叉淡化、连续旁白音轨合成
+- 新表 `assets`、Shot 扩展 `character_ids/scene_id/prop_ids`
+- 启动时幂等迁移 `app/core/migrate.py`（自动补表/补列）
+- 配置项 `COHERENT_MODE`（默认 true）、`XFADE_DURATION`（默认 0.4）
+- 前端进度页「导演设定」资产卡片网格 + `asseting` 状态展示
+
+### 变更
+
+- Pipeline 状态流转：`scripting → asseting → imaging → videoing → synthesizing`
+- `coherent_mode=false` 时完整回退 M2 并行视频 + concat demuxer 硬拼接
+
 ### 待办
 
 - 初始化 frontend / backend 脚手架（待技术栈确认）

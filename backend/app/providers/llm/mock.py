@@ -18,11 +18,38 @@ class MockLLMProvider:
         return json.dumps(
             {
                 "title": "Mock 短片",
+                "assets": {
+                    "characters": [
+                        {
+                            "id": "char_main",
+                            "name_cn": "主角",
+                            "description_en": (
+                                "an orange tabby cat, anime style, consistent appearance"
+                            ),
+                        }
+                    ],
+                    "scenes": [
+                        {
+                            "id": "scene_main",
+                            "name_cn": "主场景",
+                            "description_en": (
+                                "Tokyo street at dusk, neon signs, anime background"
+                            ),
+                        }
+                    ],
+                    "props": [],
+                },
                 "shots": [
                     {
                         "index": 1,
+                        "character_ids": ["char_main"],
+                        "scene_id": "scene_main",
+                        "prop_ids": [],
                         "scene_cn": f"画面：{user_content[:30]}",
-                        "image_prompt_en": "cinematic wide shot, dramatic lighting",
+                        "image_prompt_en": (
+                            "anime style, orange tabby cat, cinematic wide shot, "
+                            "dramatic lighting"
+                        ),
                         "motion_prompt_en": (
                             "slow pan, gentle camera movement, subject walks forward"
                         ),
@@ -31,9 +58,17 @@ class MockLLMProvider:
                     },
                     {
                         "index": 2,
+                        "character_ids": ["char_main"],
+                        "scene_id": "scene_main",
+                        "prop_ids": [],
                         "scene_cn": "特写镜头，情绪递进",
-                        "image_prompt_en": "close-up shot, soft lighting, emotional",
-                        "motion_prompt_en": "slow zoom in, subtle subject movement, cinematic",
+                        "image_prompt_en": (
+                            "anime style, orange tabby cat, close-up shot, "
+                            "soft lighting, emotional"
+                        ),
+                        "motion_prompt_en": (
+                            "slow zoom in, subtle subject movement, cinematic"
+                        ),
                         "narration_cn": "第二镜旁白",
                         "duration": 4,
                     },

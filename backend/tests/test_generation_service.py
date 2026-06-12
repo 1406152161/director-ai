@@ -19,6 +19,9 @@ TEST_DB = "sqlite:///:memory:"
 def gen_session_factory():
     engine = create_engine(TEST_DB, connect_args={"check_same_thread": False})
     Base.metadata.create_all(bind=engine)
+    from app.core.migrate import run_migrations  # noqa: PLC0415
+
+    run_migrations(engine)
     factory = sessionmaker(bind=engine)
     yield factory
     Base.metadata.drop_all(bind=engine)
@@ -50,6 +53,11 @@ async def test_full_pipeline_pending_to_completed(gen_session_factory, monkeypat
     assert result.output_url
     assert "/outputs/" in result.output_url
     assert len(result.shots) == 2
+    # M3 资产
+    assert len(result.assets) >= 1
+    for asset in result.assets:
+        assert asset.image_url
+        assert asset.status == "completed"
     for shot in result.shots:
         assert shot.image_url
         assert shot.video_url
@@ -93,3 +101,34 @@ async def test_api_pipeline_with_background(client):
     assert data["shots"][0]["video_url"]
     assert data["shots"][0]["audio_url"]
     assert data["shots"][0]["clip_status"] == "completed"
+    assert "assets" in data
+    assert len(data["assets"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_m2_pipeline_when_coherent_mode_false(gen_session_factory, monkeypatch):
+    """coherent_mode=false 时走 M2 路径（无资产阶段）。"""
+    monkeypatch.setenv("COHERENT_MODE", "false")
+    get_settings = __import__("app.core.config", fromlist=["get_settings"]).get_settings
+    get_settings.cache_clear()
+
+    monkeypatch.setattr(
+        "app.services.generation_service.SessionLocal", gen_session_factory
+    )
+
+    session = gen_session_factory()
+    svc = ProjectService(session)
+    project = svc.create_project(
+        ProjectCreate(story="M2 回退测试", style="anime", duration=15, aspect_ratio="9:16")
+    )
+    session.close()
+
+    await run_generation(project.id)
+
+    session = gen_session_factory()
+    svc = ProjectService(session)
+    result = svc.get_project(project.id)
+    session.close()
+    assert result is not None
+    assert result.status == "completed"
+    assert len(result.assets) == 0

@@ -34,6 +34,9 @@ class Project(Base):
     shots: Mapped[list["Shot"]] = relationship(
         "Shot", back_populates="project", cascade="all, delete-orphan", order_by="Shot.index"
     )
+    assets: Mapped[list["Asset"]] = relationship(
+        "Asset", back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class Shot(Base):
@@ -55,5 +58,8 @@ class Shot(Base):
     clip_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     clip_status: Mapped[str] = mapped_column(String(16), default="pending")
     status: Mapped[str] = mapped_column(String(16), default="pending")
+    character_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scene_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prop_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     project: Mapped["Project"] = relationship("Project", back_populates="shots")

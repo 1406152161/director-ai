@@ -212,6 +212,7 @@
 .status-synthesizing,
 .status-scripting,
 .status-imaging,
+.status-asseting,
 .status-pending {
   background: #fff3e0;
   color: #e65100;
@@ -352,4 +353,64 @@
 .progress-mini {
   font-size: 0.8rem;
   color: #999;
+}
+
+.director-settings {
+  margin-bottom: 2rem;
+}
+
+.director-settings h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.asset-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.asset-image {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  display: block;
+  background: #f5f5f5;
+}
+
+.asset-image-placeholder {
+  aspect-ratio: 9 / 16;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.asset-info {
+  padding: 0.75rem;
+}
+
+.asset-type-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  background: #ede7f6;
+  color: #6c5ce7;
+  font-weight: 600;
+}
+
+.asset-name {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
 }

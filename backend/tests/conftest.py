@@ -7,6 +7,7 @@ import os
 os.environ.setdefault("LLM_PROVIDER", "mock")
 os.environ.setdefault("IMAGE_PROVIDER", "mock")
 os.environ.setdefault("VIDEO_PROVIDER", "mock")
+os.environ.setdefault("COHERENT_MODE", "true")
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 import app.models  # noqa: F401 — 注册 ORM 模型
@@ -52,10 +53,43 @@ def _mock_m2_services(monkeypatch, request, tmp_path):
             output_path.write_bytes(b"clip")
             return output_path
 
+        def compose_shot_video_only(
+            self,
+            video_path,
+            narration_cn,
+            output_path,
+            target_duration,
+            target_width,
+            target_height,
+        ):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"clip-video")
+            return output_path
+
         def probe_duration(self, media_path, fallback=0.0):
             return fallback
 
         def concat_clips(self, clip_paths, output_path):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"final")
+            return output_path
+
+        def extract_last_frame(self, video_path, output_image_path):
+            output_image_path.parent.mkdir(parents=True, exist_ok=True)
+            output_image_path.write_bytes(b"fake-jpeg")
+            return output_image_path
+
+        def concat_clips_xfade(self, clip_paths, output_path, xfade_duration=0.4):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"xfade-video")
+            return output_path
+
+        def build_continuous_audio(self, audio_paths, output_path):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"continuous-audio")
+            return output_path
+
+        def compose_final_with_continuous_audio(self, video_path, continuous_audio, output_path):
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(b"final")
             return output_path
@@ -88,6 +122,9 @@ def _reset_provider_cache():
 def db_engine():
     engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
     Base.metadata.create_all(bind=engine)
+    from app.core.migrate import run_migrations  # noqa: PLC0415
+
+    run_migrations(engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
 

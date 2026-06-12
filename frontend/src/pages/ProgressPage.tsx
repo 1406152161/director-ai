@@ -4,18 +4,51 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { fetchProject } from '../api/client';
+import type { AssetResponse } from '../api/client';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
 const STATUS_LABEL: Record<string, string> = {
   pending: '排队中',
   scripting: '脚本生成中',
+  asseting: '资产生成中',
   imaging: '配图生成中',
   videoing: '视频生成中',
   synthesizing: '合成中',
   completed: '已完成',
   failed: '生成失败',
 };
+
+const ASSET_TYPE_LABEL: Record<string, string> = {
+  character: '角色',
+  scene: '场景',
+  prop: '道具',
+};
+
+function assetImageSrc(url: string): string {
+  return url.startsWith('http') ? url : `${API_BASE}${url}`;
+}
+
+function AssetCard({ asset }: { asset: AssetResponse }) {
+  const typeLabel = ASSET_TYPE_LABEL[asset.asset_type] ?? asset.asset_type;
+  return (
+    <article className="asset-card">
+      {asset.image_url ? (
+        <img
+          src={assetImageSrc(asset.image_url)}
+          alt={asset.name_cn}
+          className="asset-image"
+        />
+      ) : (
+        <div className="asset-image-placeholder">生成中…</div>
+      )}
+      <div className="asset-info">
+        <span className="asset-type-badge">{typeLabel}</span>
+        <p className="asset-name">{asset.name_cn}</p>
+      </div>
+    </article>
+  );
+}
 
 function ProgressPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -52,12 +85,16 @@ function ProgressPage() {
 
   const statusLabel = STATUS_LABEL[project.status] ?? project.status;
   const totalShots = project.shots.length;
+  const totalAssets = project.assets.length;
+  const completedAssets = project.assets.filter((a) => a.image_url).length;
   const completedImages = project.shots.filter((s) => s.image_url).length;
   const completedVideos = project.shots.filter((s) => s.video_url).length;
   const completedClips = project.shots.filter((s) => s.clip_status === 'completed').length;
 
   let progressHint = statusLabel;
-  if (project.status === 'imaging' && totalShots > 0) {
+  if (project.status === 'asseting' && totalAssets > 0) {
+    progressHint = `资产 ${completedAssets}/${totalAssets}`;
+  } else if (project.status === 'imaging' && totalShots > 0) {
     progressHint = `配图 ${completedImages}/${totalShots}`;
   } else if (project.status === 'videoing' && totalShots > 0) {
     progressHint = `视频 ${completedVideos}/${totalShots}`;
@@ -92,21 +129,27 @@ function ProgressPage() {
         <p className="placeholder-hint">正在生成分镜脚本，请稍候…</p>
       )}
 
+      {project.status === 'asseting' && totalAssets > 0 && (
+        <p className="placeholder-hint">
+          正在生成导演设定资产（{completedAssets}/{totalAssets}）…
+        </p>
+      )}
+
       {project.status === 'imaging' && totalShots > 0 && (
         <p className="placeholder-hint">
-          正在为 {totalShots} 个镜头生成竖屏配图（{completedImages}/{totalShots}）…
+          正在为 {totalShots} 个镜头生成关键帧（{completedImages}/{totalShots}）…
         </p>
       )}
 
       {project.status === 'videoing' && totalShots > 0 && (
         <p className="placeholder-hint">
-          正在生成视频与旁白（{completedVideos}/{totalShots}）…
+          正在链式生成视频与旁白（{completedVideos}/{totalShots}）…
         </p>
       )}
 
       {project.status === 'synthesizing' && totalShots > 0 && (
         <p className="placeholder-hint">
-          正在合成镜头片段（{completedClips}/{totalShots}）…
+          正在 xfade 转场合成（{completedClips}/{totalShots}）…
         </p>
       )}
 
@@ -122,6 +165,17 @@ function ProgressPage() {
         </div>
       )}
 
+      {project.assets.length > 0 && (
+        <div className="director-settings">
+          <h2>导演设定</h2>
+          <div className="asset-grid">
+            {project.assets.map((asset) => (
+              <AssetCard key={asset.id} asset={asset} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {project.shots.length > 0 && (
         <div className="storyboard-result">
           <h2>分镜卡片</h2>
@@ -130,7 +184,7 @@ function ProgressPage() {
               <article key={shot.id} className="shot-card">
                 {shot.image_url ? (
                   <img
-                    src={shot.image_url}
+                    src={shot.image_url.startsWith('http') ? shot.image_url : `${API_BASE}${shot.image_url}`}
                     alt={`镜头 ${shot.index}`}
                     className="shot-image"
                   />
