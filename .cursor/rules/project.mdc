@@ -1,0 +1,37 @@
+---
+description: director-ai 项目核心约定
+alwaysApply: true
+---
+
+# director-ai 项目约定
+
+## 项目定位
+
+AI 导演平台：从创意到成片的工业化工作流（Script → Asset → Keyframe → Video）。
+
+## 分支策略
+
+- `main`：稳定发布分支
+- `dev`：日常开发分支，功能在此集成后再合并到 main
+
+## 代码规范
+
+- 新增源码文件（Java/Kotlin/Vue/TS/XML 等）类级注释统一使用 `@author zhangzhihao`
+- 保持改动最小化，匹配现有代码风格
+- 注释只解释非显而易见的业务逻辑
+
+## 技术方向（待实现）
+
+- 前端：React + TypeScript + Vite
+- 后端：Python FastAPI 或 Node.js（按模块选型）
+- AI 服务：LLM 剧本/分镜、图像生成、视频生成 API 集成
+
+## 目录规划
+
+```
+director-ai/
+├── frontend/     # 导演工作台 UI
+├── backend/      # API 与 Pipeline 编排
+├── docs/         # 设计文档
+└── .cursor/      # Cursor 规则与配置
+```
