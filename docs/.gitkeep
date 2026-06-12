@@ -1,0 +1,6 @@
+# Docs
+
+项目设计文档与 GitHub 协作说明。
+
+- [branch-strategy.md](branch-strategy.md) — 分支策略与发布流程
+- [github-setup.md](github-setup.md) — GitHub 仓库手动设置清单

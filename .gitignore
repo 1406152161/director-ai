@@ -1,0 +1,56 @@
+# ============================================
+# Git 忽略规则 — director-ai
+# 防止依赖、构建产物、密钥等被提交到仓库
+# ============================================
+
+# --- 依赖目录 ---
+node_modules/
+.pnpm-store/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.Python
+
+# --- 构建产物 ---
+dist/
+build/
+*.egg-info/
+.next/
+out/
+
+# --- 环境变量（禁止提交真实密钥） ---
+.env
+.env.*
+!.env.example
+
+# --- IDE / 编辑器 ---
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# --- 操作系统文件 ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- 日志与临时文件 ---
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# --- 测试与覆盖率报告 ---
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.nyc_output/
+
+# --- AI 生成产物（体积大，不入库） ---
+outputs/
+generated/

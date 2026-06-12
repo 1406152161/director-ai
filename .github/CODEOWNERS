@@ -1,0 +1,11 @@
+# CODEOWNERS — 自动指定 Pull Request 的默认 Review 负责人
+# 详见 https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# 全仓库默认负责人
+* @1406152161
+
+# GitHub 工作流与协作配置变更需负责人 Review
+/.github/ @1406152161
+
+# 文档变更
+/docs/ @1406152161

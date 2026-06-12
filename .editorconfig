@@ -1,0 +1,29 @@
+# EditorConfig 配置：统一不同编辑器/IDE 的基础格式
+# 详见 https://editorconfig.org
+
+root = true
+
+# 默认规则：适用于所有文件
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Markdown 文件保留行尾空格（用于换行）
+[*.md]
+trim_trailing_whitespace = false
+
+# Python 文件使用 4 空格缩进
+[*.py]
+indent_size = 4
+
+# Makefile 必须使用 Tab
+[Makefile]
+indent_style = tab
+
+# YAML 配置文件
+[*.{yml,yaml}]
+indent_size = 2
