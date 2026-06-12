@@ -4,5 +4,6 @@
 
 - [architecture.md](architecture.md) — 平台整体架构与技术选型
 - [m1-design.md](m1-design.md) — M1 设计：创意→脚本/分镜→配图
+- [m2-design.md](m2-design.md) — M2 设计：视频生成→旁白→合成成片
 - [branch-strategy.md](branch-strategy.md) — 分支策略与发布流程
 - [github-setup.md](github-setup.md) — GitHub 仓库手动设置清单
