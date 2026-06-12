@@ -2,18 +2,27 @@
  * @author zhangzhihao
  */
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { listProjects } from '../api/client';
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: '排队中',
+  scripting: '脚本生成中',
+  imaging: '配图生成中',
+  completed: '已完成',
+  failed: '失败',
+};
 
 function LibraryPage() {
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: listProjects,
+    refetchInterval: 5000,
   });
 
   return (
     <section className="page library-page">
       <h1>我的作品</h1>
-      <p className="placeholder-hint">M0 占位页 — 展示历史创作与成片预览</p>
 
       {isLoading && <p>加载中…</p>}
 
@@ -24,14 +33,22 @@ function LibraryPage() {
       {projects && projects.length > 0 && (
         <ul className="project-list">
           {projects.map((project) => (
-            <li key={project.id} className="project-card">
-              <p className="project-story">{project.story}</p>
-              <div className="project-meta">
-                <span>{project.style}</span>
-                <span>{project.duration}s</span>
-                <span>{project.aspect_ratio}</span>
-                <span className="status">{project.status}</span>
-              </div>
+            <li key={project.id}>
+              <Link to={`/progress/${project.id}`} className="project-card">
+                <p className="project-title">{project.title ?? project.story}</p>
+                <p className="project-story">{project.story}</p>
+                <div className="project-meta">
+                  <span>{project.style}</span>
+                  <span>{project.duration}s</span>
+                  <span>{project.aspect_ratio}</span>
+                  <span className={`status status-${project.status}`}>
+                    {STATUS_LABEL[project.status] ?? project.status}
+                  </span>
+                  {project.status !== 'completed' && (
+                    <span className="progress-mini">{project.progress}%</span>
+                  )}
+                </div>
+              </Link>
             </li>
           ))}
         </ul>

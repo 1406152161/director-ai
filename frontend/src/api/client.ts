@@ -15,6 +15,17 @@ export interface ProjectCreatePayload {
   aspect_ratio: string;
 }
 
+export interface ShotResponse {
+  id: string;
+  index: number;
+  scene_cn: string;
+  image_prompt_en: string;
+  narration_cn: string;
+  duration: number;
+  image_url: string | null;
+  status: string;
+}
+
 export interface ProjectResponse {
   id: string;
   story: string;
@@ -22,6 +33,23 @@ export interface ProjectResponse {
   duration: number;
   aspect_ratio: string;
   status: string;
+  progress: number;
+  title: string | null;
+  error: string | null;
+  created_at: string | null;
+  shots: ShotResponse[];
+}
+
+export interface ProjectListItem {
+  id: string;
+  story: string;
+  style: string;
+  duration: number;
+  aspect_ratio: string;
+  status: string;
+  progress: number;
+  title: string | null;
+  created_at: string | null;
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -46,6 +74,10 @@ export async function createProject(payload: ProjectCreatePayload): Promise<Proj
   });
 }
 
-export async function listProjects(): Promise<ProjectResponse[]> {
-  return request<ProjectResponse[]>('/api/projects');
+export async function fetchProject(projectId: string): Promise<ProjectResponse> {
+  return request<ProjectResponse>(`/api/projects/${projectId}`);
+}
+
+export async function listProjects(): Promise<ProjectListItem[]> {
+  return request<ProjectListItem[]>('/api/projects');
 }

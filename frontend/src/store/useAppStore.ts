@@ -20,7 +20,7 @@ const defaultDraft: CreationDraft = {
   story: '',
   style: 'cinematic',
   duration: 30,
-  aspectRatio: '16:9',
+  aspectRatio: '9:16',
 };
 
 export const useAppStore = create<AppState>((set) => ({
