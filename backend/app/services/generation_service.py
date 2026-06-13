@@ -5,8 +5,6 @@ import asyncio
 import logging
 from pathlib import Path
 
-import httpx
-
 from app.core.config import get_settings
 from app.core.constants import aspect_to_video_size
 from app.core.database import SessionLocal
@@ -18,30 +16,20 @@ from app.services.image_service import ImageService
 from app.services.project_service import ProjectService
 from app.services.script_service import ScriptService, ShotData
 from app.services.tts_service import TTSService
+from app.utils.media_download import download_media_file
 
 logger = logging.getLogger(__name__)
 
 
 async def _download_file(url: str, dest: Path) -> Path:
-    """下载远程媒资到本地。mock/example URL 写入占位内容供测试。"""
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    if url.startswith("/outputs/") or url.startswith("file://"):
-        # 本地静态资源路径，复制或写入占位
-        local = url.removeprefix("file://")
-        src = Path(get_settings().outputs_dir).parent / local.lstrip("/")
-        if src.exists():
-            dest.write_bytes(src.read_bytes())
-            return dest
-        dest.write_bytes(b"fake-video-content")
-        return dest
-    if "example.com" in url or url.startswith("mock://"):
-        dest.write_bytes(b"fake-video-content")
-        return dest
-    async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-        response = await client.get(url)
-        response.raise_for_status()
-        dest.write_bytes(response.content)
-    return dest
+    """下载远程媒资到本地（含重试与 Agnes 鉴权）。"""
+    settings = get_settings()
+    return await download_media_file(
+        url,
+        dest,
+        outputs_dir=settings.outputs_dir,
+        auth_token=settings.agnes_api_key or None,
+    )
 
 
 def _outputs_root() -> Path:

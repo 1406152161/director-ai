@@ -9,6 +9,7 @@ import httpx
 from app.core.config import Settings, get_settings
 from app.core.constants import aspect_to_video_size, duration_to_num_frames
 from app.providers.base import VideoResult
+from app.providers.video.agnes_parse import extract_completed_video_url
 from app.utils.media_input import normalize_video_image_input
 from app.providers.exceptions import (
     ProviderAuthError,
@@ -169,12 +170,12 @@ class AgnesVideoProvider:
             logger.debug("Agnes Video 轮询 video_id=%s status=%s", video_id, status)
 
             if status == "completed":
-                video_url = data.get("remixed_from_video_id")
-                if not video_url:
-                    raise ProviderError(
-                        f"Agnes Video 已完成但缺少 remixed_from_video_id: {data}"
-                    )
-                return str(video_url)
+                try:
+                    video_url = extract_completed_video_url(data, self._api_base)
+                except ValueError as exc:
+                    raise ProviderError(str(exc)) from exc
+                logger.info("Agnes Video 成片 URL: %s", video_url[:120])
+                return video_url
 
             if status == "failed":
                 error_msg = data.get("error") or data.get("message") or "未知错误"
