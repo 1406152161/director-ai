@@ -48,13 +48,12 @@ function NovelWorkbenchPage() {
   });
 
   useEffect(() => {
-    if (novel?.chapters?.length) {
-      const completed = novel.chapters.filter((c) => c.status === 'completed');
-      if (completed.length > 0) {
-        setSelectedIndex(completed[completed.length - 1].index);
-      }
+    if (!novel?.chapters?.length) return;
+    const completed = novel.chapters.filter((c) => c.status === 'completed');
+    if (completed.length > 0) {
+      setSelectedIndex(completed[completed.length - 1].index);
     }
-  }, [novel?.chapters?.length, novel?.status]);
+  }, [novel?.chapters, novel?.status]);
 
   const continueMutation = useMutation({
     mutationFn: () => continueNovel(novelId!),

@@ -112,15 +112,6 @@ def _mock_m2_services(monkeypatch, request, tmp_path):
 
 
 @pytest.fixture(autouse=True)
-def _clear_novel_test_memory():
-    from app.services.novel_memory_service import _TEST_MEMORY
-
-    _TEST_MEMORY.clear()
-    yield
-    _TEST_MEMORY.clear()
-
-
-@pytest.fixture(autouse=True)
 def _novel_chroma_dir(monkeypatch, tmp_path, request):
     """小说测试使用临时 Chroma 目录。"""
     if request.node.get_closest_marker("e2e"):

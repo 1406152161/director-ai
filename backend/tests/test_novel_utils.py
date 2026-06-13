@@ -1,8 +1,6 @@
 # @author zhangzhihao
 """小说工具与 Story Bible 单元测试。"""
 
-import json
-
 from app.novel.utils import count_chinese_words
 from app.services.novel_memory_service import merge_bible_updates, parse_bible
 

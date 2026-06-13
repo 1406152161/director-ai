@@ -1,17 +1,42 @@
 # @author zhangzhihao
 """Chroma 向量记忆与 Story Bible 读写。"""
 
+import hashlib
 import json
 import logging
+import struct
 from pathlib import Path
 from typing import Any
+
+from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 
 from app.core.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
-# 测试环境内存存储，避免 CI/本地 pytest 加载 Chroma 过慢
-_TEST_MEMORY: dict[str, list[tuple[int, str, str]]] = {}
+
+class LocalHashEmbeddingFunction(EmbeddingFunction[Documents]):
+    """无网络依赖的轻量 embedding，避免 CI 下载 ONNX 模型。"""
+
+    def __init__(self, dim: int = 384) -> None:
+        self._dim = dim
+
+    def name(self) -> str:
+        return "local_hash"
+
+    def __call__(self, input: Documents) -> Embeddings:
+        embeddings: Embeddings = []
+        for text in input:
+            digest = hashlib.sha256(text.encode("utf-8")).digest()
+            floats: list[float] = []
+            while len(floats) < self._dim:
+                for i in range(0, len(digest) - 3, 4):
+                    chunk = digest[i : i + 4]
+                    val = struct.unpack("!I", chunk)[0] / 4294967295.0
+                    floats.append(val)
+                digest = hashlib.sha256(digest).digest()
+            embeddings.append(floats[: self._dim])
+        return embeddings
 
 
 def parse_bible(bible_json: str) -> dict[str, Any]:
@@ -72,10 +97,7 @@ class NovelMemoryService:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
         self._client = None
-
-    @property
-    def _use_in_memory(self) -> bool:
-        return self._settings.app_env == "test"
+        self._embedding_fn = LocalHashEmbeddingFunction()
 
     def _ensure_client(self):
         if self._client is not None:
@@ -90,19 +112,20 @@ class NovelMemoryService:
     def _collection_name(self, novel_id: str) -> str:
         return f"novel_{novel_id}"
 
+    def _get_collection(self, novel_id: str):
+        client = self._ensure_client()
+        return client.get_or_create_collection(
+            name=self._collection_name(novel_id),
+            embedding_function=self._embedding_fn,
+        )
+
     def add_chapter_summary(
         self, novel_id: str, chapter_index: int, title: str, summary: str
     ) -> None:
         """写入章节摘要到 Chroma。"""
         if not summary.strip():
             return
-        if self._use_in_memory:
-            bucket = _TEST_MEMORY.setdefault(novel_id, [])
-            bucket[:] = [item for item in bucket if item[0] != chapter_index]
-            bucket.append((chapter_index, title, summary))
-            return
-        client = self._ensure_client()
-        collection = client.get_or_create_collection(name=self._collection_name(novel_id))
+        collection = self._get_collection(novel_id)
         doc_id = f"ch_{chapter_index}"
         collection.upsert(
             ids=[doc_id],
@@ -113,22 +136,13 @@ class NovelMemoryService:
 
     def query_relevant(self, novel_id: str, query: str, top_k: int = 5) -> list[str]:
         """检索与 query 相关的章节摘要片段。"""
-        if self._use_in_memory:
-            items = _TEST_MEMORY.get(novel_id, [])
-            if not items:
-                return []
-            scored = [
-                (sum(1 for token in query if token in summary), summary)
-                for _, _, summary in items
-            ]
-            scored.sort(key=lambda pair: pair[0], reverse=True)
-            return [text for score, text in scored[:top_k] if score > 0] or [
-                summary for _, _, summary in items[-top_k:]
-            ]
         client = self._ensure_client()
         name = self._collection_name(novel_id)
         try:
-            collection = client.get_collection(name=name)
+            collection = client.get_collection(
+                name=name,
+                embedding_function=self._embedding_fn,
+            )
         except Exception:
             return []
 
