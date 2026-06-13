@@ -21,7 +21,8 @@
 
 ### 待办
 
-- 初始化 frontend / backend 脚手架（待技术栈确认）
+- **M4a 小说线**（设计已完成，见 `docs/m4-novel-design.md`）：一句话 → 大纲 → 前 3 章 → Chroma 续写
+- 视频线质量债见 `docs/backlog-quality.md`
 - 添加 commitlint + husky（代码起步后启用）
 
 ## [0.1.0] - 2026-06-12
