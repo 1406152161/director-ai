@@ -31,6 +31,18 @@ class ShotResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AssetResponse(BaseModel):
+    id: str
+    asset_type: str
+    asset_key: str
+    name_cn: str
+    description_en: str
+    image_url: str | None = None
+    status: str
+
+    model_config = {"from_attributes": True}
+
+
 class ProjectResponse(BaseModel):
     id: str
     story: str
@@ -44,6 +56,7 @@ class ProjectResponse(BaseModel):
     output_url: str | None = None
     created_at: datetime | None = None
     shots: list[ShotResponse] = Field(default_factory=list)
+    assets: list[AssetResponse] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

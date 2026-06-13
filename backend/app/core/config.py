@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     # TTS（Edge-TTS）
     tts_voice: str = "zh-CN-XiaoxiaoNeural"
 
+    # M3 连贯模式：资产一致性 + 链式尾帧 + xfade 转场
+    coherent_mode: bool = True
+    xfade_duration: float = 0.4
+
     # 本地输出与 FFmpeg
     outputs_dir: str = "outputs"
     ffmpeg_font_path: str = ""

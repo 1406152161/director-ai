@@ -21,9 +21,29 @@ class MarkdownMockLLM:
             + json.dumps(
                 {
                     "title": "橘猫雨夜东京",
+                    "assets": {
+                        "characters": [
+                            {
+                                "id": "char_main",
+                                "name_cn": "橘猫",
+                                "description_en": "orange tabby cat, anime style",
+                            }
+                        ],
+                        "scenes": [
+                            {
+                                "id": "scene_tokyo",
+                                "name_cn": "东京街头",
+                                "description_en": "rainy Tokyo street, neon lights",
+                            }
+                        ],
+                        "props": [],
+                    },
                     "shots": [
                         {
                             "index": 1,
+                            "character_ids": ["char_main"],
+                            "scene_id": "scene_tokyo",
+                            "prop_ids": [],
                             "scene_cn": "雨夜霓虹街头",
                             "image_prompt_en": "orange cat in rainy tokyo street, neon lights",
                             "motion_prompt_en": "slow tracking shot, cat walks through rain",
@@ -83,6 +103,8 @@ def test_build_script_prompt_subject_constraints():
 
     assert "主体保留" in prompt
     assert "motion_prompt_en" in prompt
+    assert "assets" in prompt
+    assert "character_ids" in prompt
     assert "禁止把动物拟人化或替换成人类" in prompt
     assert "核心主体稳定描述" in prompt
     assert "风格优先级" in prompt
@@ -111,6 +133,9 @@ async def test_generate_script_markdown_tolerance():
     assert result.shots[0].scene_cn == "雨夜霓虹街头"
     assert "orange cat" in result.shots[0].image_prompt_en
     assert result.shots[0].motion_prompt_en
+    assert result.shots[0].character_ids == ["char_main"]
+    assert result.shots[0].scene_id == "scene_tokyo"
+    assert len(result.assets.characters) == 1
     for kwargs in mock.calls_kwargs:
         assert "enable_thinking" not in kwargs
         assert kwargs.get("max_tokens") == 8192

@@ -115,6 +115,60 @@ class TestAgnesVideoProvider:
         assert captured["poll_params"]["video_id"] == "video_xyz789"
 
     @pytest.mark.asyncio
+    async def test_local_outputs_path_encoded_as_base64(
+        self, video_settings, monkeypatch, tmp_path
+    ):
+        """链式尾帧 /outputs/ 路径应转为合法 Base64，而非原样提交。"""
+        img = tmp_path / "proj" / "shot_2" / "chain_input.jpg"
+        img.parent.mkdir(parents=True)
+        img.write_bytes(b"\xff\xd8\xff tail")
+
+        settings = video_settings.model_copy(update={"outputs_dir": str(tmp_path)})
+        captured: dict = {}
+
+        class MockResponse:
+            def __init__(self, status_code, data=None):
+                self.status_code = status_code
+                self._data = data or {}
+
+            def json(self):
+                return self._data
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def post(self, url, json=None, headers=None):
+                captured["create_json"] = json
+                return MockResponse(200, {"video_id": "vid_1"})
+
+            async def get(self, url, params=None, headers=None):
+                return MockResponse(
+                    200,
+                    {
+                        "status": "completed",
+                        "remixed_from_video_id": "https://cdn.example/final.mp4",
+                    },
+                )
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: MockClient())
+        monkeypatch.setattr(asyncio, "sleep", lambda _: None)
+
+        provider = AgnesVideoProvider(settings)
+        await provider.image_to_video(
+            "/outputs/proj/shot_2/chain_input.jpg",
+            "motion",
+            5,
+        )
+
+        image_field = captured["create_json"]["image"]
+        assert not image_field.startswith("/outputs/")
+        assert len(image_field) % 4 == 0
+
+    @pytest.mark.asyncio
     async def test_poll_failed_status(self, video_settings, monkeypatch):
         class MockResponse:
             status_code = 200

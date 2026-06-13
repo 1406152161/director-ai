@@ -38,6 +38,10 @@ class LLMProvider(Protocol):
 class ImageProvider(Protocol):
     async def text_to_image(self, prompt: str, **kwargs: object) -> ImageResult: ...
 
+    async def image_to_image(
+        self, prompt: str, reference_urls: list[str], **kwargs: object
+    ) -> ImageResult: ...
+
 
 @runtime_checkable
 class VideoProvider(Protocol):

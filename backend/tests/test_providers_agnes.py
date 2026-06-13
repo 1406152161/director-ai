@@ -163,3 +163,35 @@ class TestAgnesImageProvider:
         provider = AgnesImageProvider(agnes_settings)
         with pytest.raises(ProviderBadRequestError):
             await provider.text_to_image("prompt")
+
+    @pytest.mark.asyncio
+    async def test_image_to_image_extra_body(self, agnes_settings, monkeypatch):
+        captured: dict = {}
+
+        class MockResponse:
+            status_code = 200
+
+            def json(self):
+                return {"data": [{"url": "https://img.example/i2i.png"}]}
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def post(self, url, json=None, headers=None):
+                captured["json"] = json
+                return MockResponse()
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: MockClient())
+
+        provider = AgnesImageProvider(agnes_settings)
+        refs = ["https://ref.example/a.png", "https://ref.example/b.png"]
+        result = await provider.image_to_image("a cat in scene", refs, size="768x1344")
+
+        assert result.url == "https://img.example/i2i.png"
+        assert captured["json"]["extra_body"]["image"] == refs
+        assert captured["json"]["extra_body"]["response_format"] == "url"
+        assert "response_format" not in captured["json"]

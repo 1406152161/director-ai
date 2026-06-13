@@ -78,3 +78,58 @@ class AgnesImageProvider:
             raise ProviderError(f"Agnes Image 响应格式异常: {data}") from exc
 
         return ImageResult(url=image_url, prompt=prompt)
+
+    async def image_to_image(
+        self, prompt: str, reference_urls: list[str], **kwargs: object
+    ) -> ImageResult:
+        """图生图：参考图 URL 数组放 extra_body.image。"""
+        if not reference_urls:
+            return await self.text_to_image(prompt, **kwargs)
+
+        size = kwargs.get("size", "768x1344")
+        response_format = kwargs.get("response_format", "url")
+
+        payload: dict = {
+            "model": kwargs.get("model", self._settings.agnes_image_model),
+            "prompt": prompt,
+            "size": size,
+            "extra_body": {
+                "response_format": response_format,
+                "image": reference_urls,
+            },
+        }
+
+        url = f"{self._api_base}/v1/images/generations"
+        timeout = float(kwargs.get("timeout", _DEFAULT_TIMEOUT))
+
+        logger.info(
+            "Agnes Image img2img 请求 model=%s refs=%d url=%s",
+            payload["model"],
+            len(reference_urls),
+            url,
+        )
+
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(url, json=payload, headers=self._headers)
+        except httpx.TimeoutException as exc:
+            raise ProviderTimeoutError("Agnes Image 请求超时") from exc
+        except httpx.HTTPError as exc:
+            raise ProviderError(f"Agnes Image 网络错误: {exc}") from exc
+
+        if response.status_code == 401:
+            raise ProviderAuthError("Agnes Image 认证失败，请检查 API Key")
+        if response.status_code == 400:
+            raise ProviderBadRequestError(f"Agnes Image 请求参数错误: {response.text}")
+        if response.status_code >= 400:
+            raise ProviderError(
+                f"Agnes Image 请求失败 ({response.status_code}): {response.text}"
+            )
+
+        data = response.json()
+        try:
+            image_url = data["data"][0]["url"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ProviderError(f"Agnes Image 响应格式异常: {data}") from exc
+
+        return ImageResult(url=image_url, prompt=prompt)

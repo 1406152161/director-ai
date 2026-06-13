@@ -12,12 +12,24 @@ class CountingImageProvider:
 
     def __init__(self):
         self.calls = 0
+        self.i2i_calls = 0
         self.prompts: list[str] = []
+        self.ref_urls: list[list[str]] = []
 
     async def text_to_image(self, prompt: str, **kwargs: object) -> ImageResult:
         self.calls += 1
         self.prompts.append(prompt)
         return ImageResult(url=f"https://mock/{self.calls}.png", prompt=prompt)
+
+    async def image_to_image(
+        self, prompt: str, reference_urls: list[str], **kwargs: object
+    ) -> ImageResult:
+        self.i2i_calls += 1
+        self.prompts.append(prompt)
+        self.ref_urls.append(reference_urls)
+        return ImageResult(
+            url=f"https://mock/i2i-{self.i2i_calls}.png", prompt=prompt
+        )
 
 
 @pytest.mark.asyncio
@@ -65,3 +77,32 @@ async def test_generate_images_for_shots():
         assert "anime style" in sent_prompt
         assert "cinematic realism" not in sent_prompt
         assert "film still" not in sent_prompt
+
+
+@pytest.mark.asyncio
+async def test_generate_keyframes_uses_image_to_image():
+    from app.services.script_service import AssetsData, CharacterAssetData, SceneAssetData, ShotData
+
+    provider = CountingImageProvider()
+    svc = ImageService(image_provider=provider)
+
+    assets = AssetsData(
+        characters=[
+            CharacterAssetData("char_main", "橘猫", "orange tabby cat, anime style")
+        ],
+        scenes=[SceneAssetData("scene_main", "东京", "Tokyo street at dusk")],
+    )
+    url_map = {"char_main": "https://asset/char.png", "scene_main": "https://asset/scene.png"}
+    shots = [
+        ShotData(
+            1, "场景1", "anime cat prompt", "slow pan", "旁白1", 4,
+            character_ids=["char_main"], scene_id="scene_main",
+        ),
+    ]
+
+    urls = await svc.generate_keyframes(shots, assets, url_map, "anime", "9:16")
+
+    assert len(urls) == 1
+    assert provider.i2i_calls == 1
+    assert len(provider.ref_urls[0]) == 2
+    assert "i2i" in urls[0]

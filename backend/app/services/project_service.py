@@ -1,11 +1,14 @@
 # @author zhangzhihao
 """项目业务服务：持久化与状态管理。"""
 
+import json
+
 from sqlalchemy.orm import Session, joinedload
 
+from app.models.asset import Asset
 from app.models.project import Project, Shot
-from app.schemas.project import ProjectCreate, ProjectListItem, ProjectResponse, ShotResponse
-from app.services.script_service import ShotData
+from app.schemas.project import AssetResponse, ProjectCreate, ProjectListItem, ProjectResponse, ShotResponse
+from app.services.script_service import AssetsData, ShotData
 
 
 class ProjectService:
@@ -31,7 +34,7 @@ class ProjectService:
     def get_project(self, project_id: str) -> Project | None:
         return (
             self._db.query(Project)
-            .options(joinedload(Project.shots))
+            .options(joinedload(Project.shots), joinedload(Project.assets))
             .filter(Project.id == project_id)
             .first()
         )
@@ -56,13 +59,55 @@ class ProjectService:
         project.error = error
         self._db.commit()
 
-    def save_script(self, project_id: str, title: str, shots: list[ShotData]) -> None:
+    def save_script(
+        self,
+        project_id: str,
+        title: str,
+        shots: list[ShotData],
+        assets: AssetsData | None = None,
+    ) -> None:
         project = self._db.query(Project).filter(Project.id == project_id).first()
         if not project:
             return
 
         project.title = title
         self._db.query(Shot).filter(Shot.project_id == project_id).delete()
+        self._db.query(Asset).filter(Asset.project_id == project_id).delete()
+
+        if assets:
+            for char in assets.characters:
+                self._db.add(
+                    Asset(
+                        project_id=project_id,
+                        asset_type="character",
+                        asset_key=char.id,
+                        name_cn=char.name_cn,
+                        description_en=char.description_en,
+                        status="pending",
+                    )
+                )
+            for scene in assets.scenes:
+                self._db.add(
+                    Asset(
+                        project_id=project_id,
+                        asset_type="scene",
+                        asset_key=scene.id,
+                        name_cn=scene.name_cn,
+                        description_en=scene.description_en,
+                        status="pending",
+                    )
+                )
+            for prop in assets.props:
+                self._db.add(
+                    Asset(
+                        project_id=project_id,
+                        asset_type="prop",
+                        asset_key=prop.id,
+                        name_cn=prop.name_cn,
+                        description_en=prop.description_en,
+                        status="pending",
+                    )
+                )
 
         for shot_data in shots:
             shot = Shot(
@@ -73,6 +118,9 @@ class ProjectService:
                 motion_prompt_en=shot_data.motion_prompt_en,
                 narration_cn=shot_data.narration_cn,
                 duration=shot_data.duration,
+                character_ids=json.dumps(shot_data.character_ids, ensure_ascii=False),
+                scene_id=shot_data.scene_id,
+                prop_ids=json.dumps(shot_data.prop_ids, ensure_ascii=False),
                 status="pending",
                 clip_status="pending",
             )
@@ -80,15 +128,47 @@ class ProjectService:
 
         self._db.commit()
 
+    async def update_asseting_progress(self, project_id: str, completed: int, total: int) -> None:
+        """资产生成进度：20% 起，占 10% 区间。"""
+        progress = 20 + int((completed / total) * 10) if total > 0 else 20
+        self.update_status(project_id, "asseting", progress)
+
     async def update_imaging_progress(self, project_id: str, completed: int, total: int) -> None:
-        """配图进度：20% 起，占 20% 区间。"""
-        progress = 20 + int((completed / total) * 20) if total > 0 else 20
+        """配图进度：30% 起，占 20% 区间。"""
+        progress = 30 + int((completed / total) * 20) if total > 0 else 30
         self.update_status(project_id, "imaging", progress)
 
     async def update_videoing_progress(self, project_id: str, completed: int, total: int) -> None:
-        """视频生成进度：40% 起，占 35% 区间。"""
-        progress = 40 + int((completed / total) * 35) if total > 0 else 40
+        """视频生成进度：50% 起，占 25% 区间。"""
+        progress = 50 + int((completed / total) * 25) if total > 0 else 50
         self.update_status(project_id, "videoing", progress)
+
+    def save_asset_image(self, project_id: str, asset_key: str, image_url: str) -> None:
+        asset = (
+            self._db.query(Asset)
+            .filter(Asset.project_id == project_id, Asset.asset_key == asset_key)
+            .first()
+        )
+        if asset:
+            asset.image_url = image_url
+            asset.status = "completed"
+            self._db.commit()
+
+    def get_assets_for_project(self, project_id: str) -> list[Asset]:
+        return (
+            self._db.query(Asset)
+            .filter(Asset.project_id == project_id)
+            .all()
+        )
+
+    def build_asset_url_map(self, project_id: str) -> dict[str, str]:
+        """asset_key → image_url，供关键帧图生图引用。"""
+        assets = self.get_assets_for_project(project_id)
+        return {
+            a.asset_key: a.image_url
+            for a in assets
+            if a.image_url
+        }
 
     def save_shot_image(self, project_id: str, shot_index: int, image_url: str) -> None:
         shot = (
@@ -158,6 +238,18 @@ class ProjectService:
             )
             for s in sorted(project.shots, key=lambda x: x.index)
         ]
+        assets = [
+            AssetResponse(
+                id=a.id,
+                asset_type=a.asset_type,
+                asset_key=a.asset_key,
+                name_cn=a.name_cn,
+                description_en=a.description_en,
+                image_url=a.image_url,
+                status=a.status,
+            )
+            for a in project.assets
+        ]
         return ProjectResponse(
             id=project.id,
             story=project.story,
@@ -171,6 +263,7 @@ class ProjectService:
             output_url=project.output_url,
             created_at=project.created_at,
             shots=shots,
+            assets=assets,
         )
 
     @staticmethod

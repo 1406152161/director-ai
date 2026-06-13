@@ -31,6 +31,16 @@ export interface ShotResponse {
   status: string;
 }
 
+export interface AssetResponse {
+  id: string;
+  asset_type: string;
+  asset_key: string;
+  name_cn: string;
+  description_en: string;
+  image_url: string | null;
+  status: string;
+}
+
 export interface ProjectResponse {
   id: string;
   story: string;
@@ -44,6 +54,7 @@ export interface ProjectResponse {
   output_url: string | null;
   created_at: string | null;
   shots: ShotResponse[];
+  assets: AssetResponse[];
 }
 
 export interface ProjectListItem {

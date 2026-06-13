@@ -9,6 +9,8 @@ import httpx
 from app.core.config import Settings, get_settings
 from app.core.constants import aspect_to_video_size, duration_to_num_frames
 from app.providers.base import VideoResult
+from app.providers.video.agnes_parse import extract_completed_video_url
+from app.utils.media_input import normalize_video_image_input
 from app.providers.exceptions import (
     ProviderAuthError,
     ProviderBadRequestError,
@@ -168,12 +170,12 @@ class AgnesVideoProvider:
             logger.debug("Agnes Video 轮询 video_id=%s status=%s", video_id, status)
 
             if status == "completed":
-                video_url = data.get("remixed_from_video_id")
-                if not video_url:
-                    raise ProviderError(
-                        f"Agnes Video 已完成但缺少 remixed_from_video_id: {data}"
-                    )
-                return str(video_url)
+                try:
+                    video_url = extract_completed_video_url(data, self._api_base)
+                except ValueError as exc:
+                    raise ProviderError(str(exc)) from exc
+                logger.info("Agnes Video 成片 URL: %s", video_url[:120])
+                return video_url
 
             if status == "failed":
                 error_msg = data.get("error") or data.get("message") or "未知错误"
@@ -186,10 +188,20 @@ class AgnesVideoProvider:
             f"Agnes Video 轮询超时（{timeout}s），video_id={video_id}"
         )
 
+    def _prepare_image_input(self, image_url: str) -> str:
+        """本地 /outputs/ 尾帧转为合法 Base64，避免 API 把路径字符串当 base64 解析。"""
+        try:
+            return normalize_video_image_input(
+                image_url, self._settings.outputs_dir
+            )
+        except ValueError as exc:
+            raise ProviderBadRequestError(str(exc)) from exc
+
     async def image_to_video(
         self, image_url: str, prompt: str, duration: int, **kwargs: object
     ) -> VideoResult:
         """图生视频：创建（含重试）→ 轮询 → 返回成片 URL。"""
+        prepared_image = self._prepare_image_input(image_url)
         frame_rate = int(kwargs.get("frame_rate", self._settings.agnes_video_frame_rate))
         max_frames = int(kwargs.get("max_frames", self._settings.agnes_video_max_frames))
         num_frames = int(
@@ -207,7 +219,7 @@ class AgnesVideoProvider:
             width, height = aspect_to_video_size(aspect_ratio)
 
         video_id = await self._create_video_with_retry(
-            image_url, prompt, num_frames, frame_rate, width, height
+            prepared_image, prompt, num_frames, frame_rate, width, height
         )
         url = await self._poll_video(video_id)
         return VideoResult(url=url, duration=duration)
