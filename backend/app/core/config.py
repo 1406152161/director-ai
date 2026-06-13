@@ -25,6 +25,19 @@ class Settings(BaseSettings):
     video_provider: str = "mock"
     tts_provider: str = "mock"
 
+    # 小说线 LLM（与视频线独立）
+    novel_llm_provider: str = "deepseek"
+    deepseek_api_key: str = ""
+    deepseek_api_base: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-chat"
+    zhipu_api_key: str = ""
+    zhipu_api_base: str = "https://open.bigmodel.cn/api/paas/v4"
+    zhipu_model: str = "glm-4-flash"
+    chroma_persist_dir: str = "./data/chroma"
+    novel_initial_chapters: int = 3
+    novel_target_words_min: int = 2500
+    novel_target_words_max: int = 3500
+
     # Agnes AI
     agnes_api_key: str = ""
     agnes_api_base: str = "https://apihub.agnes-ai.com"

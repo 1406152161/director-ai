@@ -98,3 +98,81 @@ export async function fetchProject(projectId: string): Promise<ProjectResponse> 
 export async function listProjects(): Promise<ProjectListItem[]> {
   return request<ProjectListItem[]>('/api/projects');
 }
+
+// --- 小说 API ---
+
+export interface NovelCreatePayload {
+  premise: string;
+  genre: string;
+}
+
+export interface NovelChapterResponse {
+  id: string;
+  index: number;
+  title: string;
+  content: string;
+  summary: string;
+  word_count: number;
+  status: string;
+}
+
+export interface NovelResponse {
+  id: string;
+  premise: string;
+  genre: string;
+  title: string;
+  synopsis: string;
+  bible_json: string;
+  status: string;
+  progress: number;
+  error: string | null;
+  created_at: string | null;
+  chapters: NovelChapterResponse[];
+}
+
+export interface NovelListItem {
+  id: string;
+  premise: string;
+  genre: string;
+  title: string;
+  status: string;
+  progress: number;
+  created_at: string | null;
+}
+
+export interface NovelChatResponse {
+  reply: string;
+  novel: NovelResponse;
+}
+
+export async function createNovel(payload: NovelCreatePayload): Promise<NovelResponse> {
+  return request<NovelResponse>('/api/novels', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchNovel(novelId: string): Promise<NovelResponse> {
+  return request<NovelResponse>(`/api/novels/${novelId}`);
+}
+
+export async function listNovels(): Promise<NovelListItem[]> {
+  return request<NovelListItem[]>('/api/novels');
+}
+
+export async function continueNovel(novelId: string): Promise<NovelResponse> {
+  return request<NovelResponse>(`/api/novels/${novelId}/chapters/next`, {
+    method: 'POST',
+  });
+}
+
+export async function chatNovel(novelId: string, message: string): Promise<NovelChatResponse> {
+  return request<NovelChatResponse>(`/api/novels/${novelId}/chat`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+export function exportNovelUrl(novelId: string, format: 'md' | 'txt'): string {
+  return `${API_BASE}/api/novels/${novelId}/export?format=${format}`;
+}

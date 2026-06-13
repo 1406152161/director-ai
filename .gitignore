@@ -56,6 +56,9 @@ htmlcov/
 *.sqlite
 *.sqlite3
 
+# --- Chroma 向量库（本地持久化） ---
+data/chroma/
+
 # --- AI 生成产物（体积大，不入库） ---
 outputs/
 generated/

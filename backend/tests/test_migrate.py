@@ -36,7 +36,7 @@ def test_run_migrations_creates_assets_table():
 def test_run_migrations_idempotent():
     engine = MagicMock()
     inspector = MagicMock()
-    inspector.get_table_names.return_value = ["projects", "shots", "assets"]
+    inspector.get_table_names.return_value = ["projects", "shots", "assets", "novels", "novel_chapters"]
     inspector.get_columns.return_value = [
         {"name": "id"},
         {"name": "character_ids"},

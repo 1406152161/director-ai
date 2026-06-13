@@ -4,7 +4,9 @@
 import os
 
 # 必须在导入 app 之前设置，确保测试不依赖真实 API Key
+os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("LLM_PROVIDER", "mock")
+os.environ.setdefault("NOVEL_LLM_PROVIDER", "mock")
 os.environ.setdefault("IMAGE_PROVIDER", "mock")
 os.environ.setdefault("VIDEO_PROVIDER", "mock")
 os.environ.setdefault("COHERENT_MODE", "true")
@@ -110,6 +112,28 @@ def _mock_m2_services(monkeypatch, request, tmp_path):
 
 
 @pytest.fixture(autouse=True)
+def _clear_novel_test_memory():
+    from app.services.novel_memory_service import _TEST_MEMORY
+
+    _TEST_MEMORY.clear()
+    yield
+    _TEST_MEMORY.clear()
+
+
+@pytest.fixture(autouse=True)
+def _novel_chroma_dir(monkeypatch, tmp_path, request):
+    """小说测试使用临时 Chroma 目录。"""
+    if request.node.get_closest_marker("e2e"):
+        yield
+        return
+    chroma_dir = tmp_path / "chroma"
+    monkeypatch.setenv("CHROMA_PERSIST_DIR", str(chroma_dir))
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def _reset_provider_cache():
     get_settings.cache_clear()
     clear_provider_cache()
@@ -152,6 +176,7 @@ def client(db_engine, monkeypatch):
     monkeypatch.setattr("app.core.database.engine", db_engine)
     monkeypatch.setattr("app.core.database.SessionLocal", session_factory)
     monkeypatch.setattr("app.services.generation_service.SessionLocal", session_factory)
+    monkeypatch.setattr("app.services.novel_generation_service.SessionLocal", session_factory)
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:

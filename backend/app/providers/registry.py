@@ -6,7 +6,9 @@ from app.providers.base import ImageProvider, LLMProvider, TTSProvider, VideoPro
 from app.providers.image.agnes import AgnesImageProvider
 from app.providers.image.mock import MockImageProvider
 from app.providers.llm.agnes import AgnesLLMProvider
+from app.providers.llm.deepseek import DeepSeekLLMProvider
 from app.providers.llm.mock import MockLLMProvider
+from app.providers.llm.zhipu import ZhipuLLMProvider
 from app.providers.tts.mock import MockTTSProvider
 from app.providers.video.agnes import AgnesVideoProvider
 from app.providers.video.mock import MockVideoProvider
@@ -14,6 +16,15 @@ from app.providers.video.mock import MockVideoProvider
 _LLM_REGISTRY: dict[str, type] = {
     "mock": MockLLMProvider,
     "agnes": AgnesLLMProvider,
+    "deepseek": DeepSeekLLMProvider,
+    "zhipu": ZhipuLLMProvider,
+}
+
+_NOVEL_LLM_REGISTRY: dict[str, type] = {
+    "mock": MockLLMProvider,
+    "agnes": AgnesLLMProvider,
+    "deepseek": DeepSeekLLMProvider,
+    "zhipu": ZhipuLLMProvider,
 }
 
 _IMAGE_REGISTRY: dict[str, type] = {
@@ -44,6 +55,11 @@ def clear_provider_cache() -> None:
 def get_llm_provider(settings: Settings | None = None) -> LLMProvider:
     cfg = settings or get_settings()
     return _resolve(_LLM_REGISTRY, cfg.llm_provider, "LLM", cfg)
+
+
+def get_novel_llm_provider(settings: Settings | None = None) -> LLMProvider:
+    cfg = settings or get_settings()
+    return _resolve(_NOVEL_LLM_REGISTRY, cfg.novel_llm_provider, "Novel LLM", cfg)
 
 
 def get_image_provider(settings: Settings | None = None) -> ImageProvider:

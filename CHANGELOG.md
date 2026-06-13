@@ -7,6 +7,9 @@
 
 ### 新增
 
+- **M4a 小说线**：顶栏视频/小说/图文 Tab；题材模板（玄幻/都市/悬疑/甜宠/科幻）；规划大纲 + Story Bible + 自动前 3 章；Chroma 向量记忆续写；侧栏改稿对话；站内阅读器 + 导出 MD/TXT
+- DeepSeek / 智谱 OpenAI 兼容 LLM Provider；`get_novel_llm_provider()` 独立配置 `NOVEL_LLM_PROVIDER`
+- 新表 `novels` / `novel_chapters`；API `/api/novels` 全套；前端 `/novel` 创作页与 `/novel/:id` 工作台
 - **M3 资产一致性（M3b）**：脚本输出 `assets` 清单（角色/场景/道具），`AssetService` 文生图设定参考，关键帧 `image_to_image` 图生图
 - **M3 镜头连贯性（M3a）**：串行链式真实尾帧衔接、xfade 0.4s 交叉淡化、连续旁白音轨合成
 - 新表 `assets`、Shot 扩展 `character_ids/scene_id/prop_ids`
@@ -21,7 +24,6 @@
 
 ### 待办
 
-- **M4a 小说线**（设计已完成，见 `docs/m4-novel-design.md`）：一句话 → 大纲 → 前 3 章 → Chroma 续写
 - 视频线质量债见 `docs/backlog-quality.md`
 - 添加 commitlint + husky（代码起步后启用）
 
