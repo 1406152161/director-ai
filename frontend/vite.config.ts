@@ -11,6 +11,11 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      // 成片/镜头媒资由后端 StaticFiles 提供，开发时需代理到 8000
+      '/outputs': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 });

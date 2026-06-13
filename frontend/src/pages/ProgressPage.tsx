@@ -107,6 +107,7 @@ function ProgressPage() {
       ? project.output_url
       : `${API_BASE}${project.output_url}`
     : null;
+  const downloadName = `${(project.title || 'director-ai').replace(/[\\/:*?"<>|]/g, '_')}.mp4`;
 
   return (
     <section className="page progress-page">
@@ -159,7 +160,7 @@ function ProgressPage() {
           <video controls className="output-video" src={outputSrc}>
             您的浏览器不支持视频播放
           </video>
-          <a href={outputSrc} download className="download-btn">
+          <a href={outputSrc} download={downloadName} className="download-btn">
             下载成片
           </a>
         </div>
