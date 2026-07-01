@@ -3,6 +3,7 @@
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -82,6 +83,15 @@ class Settings(BaseSettings):
 
     # PostgreSQL + pgvector（可选，生产多实例）
     pgvector_enabled: bool = False
+
+    @model_validator(mode="after")
+    def check_jwt_secret(self) -> "Settings":
+        # 启动时 fail-fast，避免生产误用默认密钥
+        if self.auth_enabled and self.jwt_secret == "dev-change-me-in-production":
+            raise ValueError(
+                "生产环境开启 auth_enabled 时必须设置 JWT_SECRET 环境变量，不可使用默认值"
+            )
+        return self
 
 
 @lru_cache

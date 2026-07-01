@@ -15,6 +15,14 @@ from app.services.project_service import ProjectService
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
+def _assert_owner(project, owner_id: str | None) -> None:
+    """auth_enabled 时校验资源归属；越权返回 404 避免泄露存在性。"""
+    if not get_settings().auth_enabled or owner_id is None:
+        return
+    if project.owner_id != owner_id:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+
 @router.get("", response_model=list[ProjectListItem])
 async def list_projects(
     db: Session = Depends(get_db),
@@ -45,11 +53,13 @@ async def retry_project(
     project_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    owner_id: str | None = Depends(optional_owner_id),
 ) -> ProjectResponse:
     svc = ProjectService(db)
     project = svc.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
+    _assert_owner(project, owner_id)
     if project.status != "failed":
         raise HTTPException(status_code=409, detail="仅失败项目可重试")
     svc.reset_for_retry(project_id)
@@ -59,20 +69,30 @@ async def retry_project(
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-async def get_project(project_id: str, db: Session = Depends(get_db)) -> ProjectResponse:
+async def get_project(
+    project_id: str,
+    db: Session = Depends(get_db),
+    owner_id: str | None = Depends(optional_owner_id),
+) -> ProjectResponse:
     svc = ProjectService(db)
     project = svc.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
+    _assert_owner(project, owner_id)
     return svc.to_response(project)
 
 
 @router.delete("/{project_id}", status_code=204)
-async def delete_project(project_id: str, db: Session = Depends(get_db)) -> None:
+async def delete_project(
+    project_id: str,
+    db: Session = Depends(get_db),
+    owner_id: str | None = Depends(optional_owner_id),
+) -> None:
     svc = ProjectService(db)
     project = svc.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
+    _assert_owner(project, owner_id)
     try:
         svc.delete_project(project_id)
     except ValueError as exc:
@@ -89,4 +109,5 @@ def _project_progress_snapshot(db: Session, project_id: str) -> tuple[str, int, 
 
 @router.get("/{project_id}/events")
 async def project_progress_events(project_id: str, db: Session = Depends(get_db)):
+    # TODO: auth_enabled 时对 SSE 订阅做 owner 校验
     return progress_event_response("project", project_id, db, load_snapshot=_project_progress_snapshot)

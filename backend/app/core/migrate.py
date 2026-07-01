@@ -2,11 +2,21 @@
 """启动时数据库迁移：幂等补表/补列，避免要求用户删库。"""
 
 import logging
+import re
 
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
+
+_SAFE_SQL_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,63}$")
+
+
+def _validate_sql_name(name: str) -> str:
+    """迁移 DDL 标识符白名单，防止异常参数进入 ALTER TABLE。"""
+    if not _SAFE_SQL_NAME.match(name):
+        raise ValueError(f"非法 SQL 标识符: {name}")
+    return name
 
 _ASSETS_DDL = """
 CREATE TABLE IF NOT EXISTS assets (
@@ -147,6 +157,8 @@ CREATE TABLE IF NOT EXISTS articles (
 
 
 def _add_column_if_missing(engine: Engine, table: str, col_name: str, col_type: str) -> None:
+    table = _validate_sql_name(table)
+    col_name = _validate_sql_name(col_name)
     inspector = inspect(engine)
     if table not in inspector.get_table_names():
         return

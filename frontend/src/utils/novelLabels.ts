@@ -13,6 +13,14 @@ export const NOVEL_STATUS_LABEL: Record<string, string> = {
   needs_review: '待复核',
 };
 
+/** completed 且 progress<100 表示本批写完、全书未完结，区别于「已完成」。 */
+export function novelStatusLabel(status: string, progress?: number): string {
+  if (status === 'completed' && progress != null && progress < 100) {
+    return `连载中 ${progress}%`;
+  }
+  return NOVEL_STATUS_LABEL[status] ?? status;
+}
+
 export const GENRE_LABEL: Record<string, string> = {
   xuanhuan: '玄幻',
   dushi: '都市',

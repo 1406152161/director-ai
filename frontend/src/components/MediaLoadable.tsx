@@ -1,7 +1,7 @@
 /**
  * @author zhangzhihao
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type LoadableImageProps = {
   src: string;
@@ -28,6 +28,12 @@ export function LoadableImage({
 }: LoadableImageProps) {
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+
+  // src 切换（如重新生成）时重置失败态
+  useEffect(() => {
+    setFailed(false);
+    setRetryKey(0);
+  }, [src]);
 
   if (failed) {
     return (
@@ -67,6 +73,12 @@ export function LoadableVideo({
 }: LoadableVideoProps) {
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+
+  // src 切换（如重新生成）时重置失败态
+  useEffect(() => {
+    setFailed(false);
+    setRetryKey(0);
+  }, [src]);
 
   if (failed) {
     return (

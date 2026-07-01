@@ -286,9 +286,10 @@ async def _run_m3_pipeline(project_id: str) -> None:
                     video_input_url = shot.image_url or ""
                 else:
                     assert prev_local_video is not None
-                    tail_frame = shot_dir / "chain_input.jpg"
-                    ffmpeg_svc.extract_last_frame(prev_local_video, tail_frame)
-                    video_input_url = _local_output_url(
+                tail_frame = shot_dir / "chain_input.jpg"
+                ffmpeg_svc.extract_last_frame(prev_local_video, tail_frame)
+                # 本地 /outputs/ URL；AgnesVideoProvider 会转为 Base64
+                video_input_url = _local_output_url(
                         project_id, f"shot_{shot.index}", "chain_input.jpg"
                     )
 

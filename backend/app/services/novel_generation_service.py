@@ -458,11 +458,15 @@ async def run_novel_start_writing(novel_id: str, write_count: int = 3) -> None:
         ) = _build_services(db)
 
         novel = novel_svc.get_novel(novel_id)
-        if not novel or novel.status != "planned":
+        if not novel:
+            return
+        # API 已 try_lock 时 status=writing；兼容 Celery/测试直接调用
+        if novel.status == "planned":
+            novel_svc.update_status(novel_id, "writing", 20)
+        elif novel.status != "writing":
             return
 
         try:
-            novel_svc.update_status(novel_id, "writing", 20)
             all_ok = await _write_initial_chapters(
                 novel_id,
                 novel_svc,
@@ -478,7 +482,7 @@ async def run_novel_start_writing(novel_id: str, write_count: int = 3) -> None:
                 write_count,
             )
             if all_ok:
-                novel_svc.update_status(novel_id, "completed", 100)
+                novel_svc.finalize_after_writing_batch(novel_id)
         except Exception as exc:
             logger.exception("开始写作失败: %s", novel_id)
             novel_svc.set_failed(novel_id, str(exc))
@@ -535,7 +539,7 @@ async def run_novel_next_chapter(novel_id: str, write_count: int = 1) -> None:
                 plan_svc,
             )
             if all_ok:
-                novel_svc.update_status(novel_id, "completed", 100)
+                novel_svc.finalize_after_writing_batch(novel_id)
             else:
                 return
         except Exception as exc:
@@ -692,7 +696,7 @@ async def run_rewrite_chapter(novel_id: str, chapter_index: int) -> None:
                 )
                 novel_svc.clear_review_block_if_none(novel_id)
                 if not novel_svc.has_blocking_review(novel_id):
-                    novel_svc.update_status(novel_id, "completed", 100)
+                    novel_svc.finalize_after_writing_batch(novel_id)
             else:
                 novel_svc.save_chapter(
                     chapter.id,

@@ -1,6 +1,7 @@
 # @author zhangzhihao
 """FastAPI 应用入口。"""
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from app.api import articles, auth, health, novels, projects
 from app.core.config import get_settings
 from app.core.database import init_db
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 outputs_path = Path(settings.outputs_dir)
 outputs_path.mkdir(parents=True, exist_ok=True)
@@ -19,6 +21,11 @@ outputs_path.mkdir(parents=True, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # 启动日志提醒运维确认鉴权开关
+    if settings.auth_enabled:
+        logger.info("认证已启用")
+    else:
+        logger.warning("认证已关闭，所有 API 无需鉴权")
     init_db()
     yield
 

@@ -32,7 +32,7 @@ import {
   type NovelBibleOutlineItem,
   type NovelBibleVolume,
 } from '../utils/novelBible';
-import { GENRE_LABEL, NOVEL_STATUS_LABEL } from '../utils/novelLabels';
+import { GENRE_LABEL, NOVEL_STATUS_LABEL, novelStatusLabel } from '../utils/novelLabels';
 import { isTerminalProgressStatus, useProgressEvents } from '../hooks/useProgressEvents';
 
 type MainTab = 'read' | 'world' | 'outline';
@@ -57,6 +57,16 @@ function firstMutationError(
   return null;
 }
 
+/** 安全解析章节校验问题 JSON，避免 malformed 数据导致页面崩溃。 */
+function parseValidationIssues(raw: string | null | undefined): string[] {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return ['解析问题列表失败，请刷新重试'];
+  }
+}
+
 function NovelWorkbenchPage() {
   const { novelId } = useParams<{ novelId: string }>();
   const queryClient = useQueryClient();
@@ -72,6 +82,8 @@ function NovelWorkbenchPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [editWorld, setEditWorld] = useState('');
   const [editPower, setEditPower] = useState('');
+  /** SSE 刷新 bible 时，若用户正在编辑世界观则不同步覆盖。 */
+  const [worldDirty, setWorldDirty] = useState(false);
   const [sseConnected, setSseConnected] = useState(false);
 
   const { data: novel, isLoading, isError, error } = useQuery({
@@ -122,11 +134,10 @@ function NovelWorkbenchPage() {
   }, [isPlanned]);
 
   useEffect(() => {
-    if (bible) {
-      setEditWorld(bible.world);
-      setEditPower(bible.power_system ?? '');
-    }
-  }, [bible?.world, bible?.power_system, novel?.bible_json]);
+    if (worldDirty || !bible) return;
+    setEditWorld(bible.world);
+    setEditPower(bible.power_system ?? '');
+  }, [bible?.world, bible?.power_system, novel?.bible_json, worldDirty]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['novel', novelId] });
 
@@ -146,7 +157,12 @@ function NovelWorkbenchPage() {
   const patchMutation = useMutation({
     mutationFn: (patch: Parameters<typeof patchNovelBible>[1]) =>
       patchNovelBible(novelId!, patch),
-    onSuccess: invalidate,
+    onSuccess: (_data, patch) => {
+      if (patch.world !== undefined || patch.power_system !== undefined) {
+        setWorldDirty(false);
+      }
+      invalidate();
+    },
   });
 
   const approveMutation = useMutation({
@@ -238,6 +254,16 @@ function NovelWorkbenchPage() {
     patchMutation.mutate({ world: editWorld, power_system: editPower });
   };
 
+  const handleEditWorld = (value: string) => {
+    setWorldDirty(true);
+    setEditWorld(value);
+  };
+
+  const handleEditPower = (value: string) => {
+    setWorldDirty(true);
+    setEditPower(value);
+  };
+
   const saveCharacters = (characters: NovelBibleCharacter[]) => {
     patchMutation.mutate({ characters });
   };
@@ -282,7 +308,7 @@ function NovelWorkbenchPage() {
         </div>
         <StatusBadge
           status={novel.status}
-          label={`${NOVEL_STATUS_LABEL[novel.status] ?? novel.status}${isBusy ? ` ${novel.progress}%` : ''}`}
+          label={`${novelStatusLabel(novel.status, novel.progress)}${isBusy ? ` ${novel.progress}%` : ''}`}
         />
       </header>
 
@@ -453,7 +479,7 @@ function NovelWorkbenchPage() {
                     <div className="validation-issues">
                       <h3>责编问题（评分 {currentChapter.validation_score}）</h3>
                       <ul>
-                        {(JSON.parse(currentChapter.validation_issues || '[]') as string[]).map(
+                        {parseValidationIssues(currentChapter.validation_issues).map(
                           (issue, i) => (
                             <li key={i}>{issue}</li>
                           ),
@@ -502,8 +528,8 @@ function NovelWorkbenchPage() {
               novelSynopsis={novel.synopsis}
               editWorld={editWorld}
               editPower={editPower}
-              onEditWorld={setEditWorld}
-              onEditPower={setEditPower}
+              onEditWorld={handleEditWorld}
+              onEditPower={handleEditPower}
               onSaveWorld={saveWorldPatch}
               onSaveCharacters={saveCharacters}
               onSaveItems={saveItems}

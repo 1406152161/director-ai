@@ -2,8 +2,12 @@
 """小说 CRUD、导出与 Story Bible 持久化。"""
 
 import json
+import logging
 
+from sqlalchemy import update
 from sqlalchemy.orm import Session, joinedload
+
+logger = logging.getLogger(__name__)
 
 from app.models.novel import Novel, NovelChapter
 from app.novel.prompts import VALID_GENRES, genre_label
@@ -68,10 +72,71 @@ class NovelService:
         novel = self._db.query(Novel).filter(Novel.id == novel_id).first()
         if not novel:
             return
+        prev_status = novel.status
         novel.status = status
         if progress is not None:
             novel.progress = progress
         self._db.commit()
+        logger.info(
+            "novel %s status %s -> %s progress=%s",
+            novel_id,
+            prev_status,
+            status,
+            novel.progress,
+        )
+        self._emit_progress(novel_id)
+
+    def get_total_chapters(self, novel_id: str) -> int:
+        """从 bible.meta 或 outline 表获取全书目标章数。"""
+        novel = self.get_novel(novel_id)
+        if not novel:
+            return 0
+        bible = parse_bible(novel.bible_json)
+        total = int(bible.get("meta", {}).get("total_chapters") or 0)
+        if not total:
+            from app.services.novel_outline_service import NovelOutlineService
+
+            total = NovelOutlineService(self._db).count_by_level(novel_id)
+        return total
+
+    def count_completed_chapters(self, novel_id: str) -> int:
+        return (
+            self._db.query(NovelChapter)
+            .filter(
+                NovelChapter.novel_id == novel_id,
+                NovelChapter.status == "completed",
+            )
+            .count()
+        )
+
+    def is_all_chapters_written(self, novel_id: str) -> bool:
+        """已完成章节数是否达到全书目标章数。"""
+        total = self.get_total_chapters(novel_id)
+        if total <= 0:
+            return False
+        return self.count_completed_chapters(novel_id) >= total
+
+    def finalize_after_writing_batch(self, novel_id: str) -> None:
+        """写作批次结束：status 保持 completed（SSE 终态、可续写），progress 反映真实进度。"""
+        if self.is_all_chapters_written(novel_id):
+            self.update_status(novel_id, "completed", 100)
+            return
+        total = self.get_total_chapters(novel_id)
+        written = self.count_completed_chapters(novel_id)
+        progress = int(written / max(total, 1) * 100)
+        self.update_status(novel_id, "completed", progress)
+
+    def try_lock_for_writing(self, novel_id: str, *, expected_status: str | None = None) -> None:
+        """原子抢占写作锁；已在 writing 或 expected_status 不匹配时抛出 ValueError。"""
+        stmt = update(Novel).where(Novel.id == novel_id, Novel.status != "writing")
+        if expected_status is not None:
+            stmt = stmt.where(Novel.status == expected_status)
+        result = self._db.execute(stmt.values(status="writing"))
+        self._db.commit()
+        if result.rowcount == 0:
+            if expected_status == "planned":
+                raise ValueError("当前状态不可开始写作")
+            raise ValueError("正在写作中，请稍后再试")
         self._emit_progress(novel_id)
 
     def set_failed(self, novel_id: str, error: str) -> None:
@@ -380,12 +445,12 @@ class NovelService:
         return self.sync_bible_indexes(novel_id, bible)
 
     def clear_review_block_if_none(self, novel_id: str) -> None:
+        """无待复核章节时，从 review_required 恢复为可续写状态（非全书完结时不应 progress=100）。"""
         if self.has_blocking_review(novel_id):
             return
         novel = self._db.query(Novel).filter(Novel.id == novel_id).first()
         if novel and novel.status == "review_required":
-            novel.status = "completed"
-            self._db.commit()
+            self.finalize_after_writing_batch(novel_id)
 
     def get_chapter(self, novel_id: str, index: int) -> NovelChapter | None:
         return (
@@ -556,9 +621,9 @@ class NovelService:
         try:
             from app.services.novel_memory_service import NovelMemoryService
 
-            NovelMemoryService(self._db).drop_collection(novel_id)
-        except Exception:
-            pass
+            NovelMemoryService().drop_collection(novel_id)
+        except Exception as exc:
+            logger.warning("清理 Chroma 向量集合失败: %s", exc)
         self._db.delete(novel)
         self._db.commit()
         return True

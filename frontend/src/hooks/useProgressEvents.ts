@@ -89,6 +89,7 @@ export function useProgressEvents(
       closed = true;
       if (retryTimer) clearTimeout(retryTimer);
       source?.close();
+      source = null; // 避免 effect 重入时闭包引用已关闭连接
     };
   }, [kind, resourceId, enabled]);
 }

@@ -100,62 +100,68 @@ class ProjectService:
             return
 
         project.title = title
-        self._db.query(Shot).filter(Shot.project_id == project_id).delete()
-        self._db.query(Asset).filter(Asset.project_id == project_id).delete()
+        # SAVEPOINT：删除后插入失败时回滚，避免分镜/资产半丢失
+        try:
+            self._db.begin_nested()
+            self._db.query(Shot).filter(Shot.project_id == project_id).delete()
+            self._db.query(Asset).filter(Asset.project_id == project_id).delete()
 
-        if assets:
-            for char in assets.characters:
-                self._db.add(
-                    Asset(
-                        project_id=project_id,
-                        asset_type="character",
-                        asset_key=char.id,
-                        name_cn=char.name_cn,
-                        description_en=char.description_en,
-                        status="pending",
+            if assets:
+                for char in assets.characters:
+                    self._db.add(
+                        Asset(
+                            project_id=project_id,
+                            asset_type="character",
+                            asset_key=char.id,
+                            name_cn=char.name_cn,
+                            description_en=char.description_en,
+                            status="pending",
+                        )
                     )
-                )
-            for scene in assets.scenes:
-                self._db.add(
-                    Asset(
-                        project_id=project_id,
-                        asset_type="scene",
-                        asset_key=scene.id,
-                        name_cn=scene.name_cn,
-                        description_en=scene.description_en,
-                        status="pending",
+                for scene in assets.scenes:
+                    self._db.add(
+                        Asset(
+                            project_id=project_id,
+                            asset_type="scene",
+                            asset_key=scene.id,
+                            name_cn=scene.name_cn,
+                            description_en=scene.description_en,
+                            status="pending",
+                        )
                     )
-                )
-            for prop in assets.props:
-                self._db.add(
-                    Asset(
-                        project_id=project_id,
-                        asset_type="prop",
-                        asset_key=prop.id,
-                        name_cn=prop.name_cn,
-                        description_en=prop.description_en,
-                        status="pending",
+                for prop in assets.props:
+                    self._db.add(
+                        Asset(
+                            project_id=project_id,
+                            asset_type="prop",
+                            asset_key=prop.id,
+                            name_cn=prop.name_cn,
+                            description_en=prop.description_en,
+                            status="pending",
+                        )
                     )
-                )
 
-        for shot_data in shots:
-            shot = Shot(
-                project_id=project_id,
-                index=shot_data.index,
-                scene_cn=shot_data.scene_cn,
-                image_prompt_en=shot_data.image_prompt_en,
-                motion_prompt_en=shot_data.motion_prompt_en,
-                narration_cn=shot_data.narration_cn,
-                duration=shot_data.duration,
-                character_ids=json.dumps(shot_data.character_ids, ensure_ascii=False),
-                scene_id=shot_data.scene_id,
-                prop_ids=json.dumps(shot_data.prop_ids, ensure_ascii=False),
-                status="pending",
-                clip_status="pending",
-            )
-            self._db.add(shot)
+            for shot_data in shots:
+                shot = Shot(
+                    project_id=project_id,
+                    index=shot_data.index,
+                    scene_cn=shot_data.scene_cn,
+                    image_prompt_en=shot_data.image_prompt_en,
+                    motion_prompt_en=shot_data.motion_prompt_en,
+                    narration_cn=shot_data.narration_cn,
+                    duration=shot_data.duration,
+                    character_ids=json.dumps(shot_data.character_ids, ensure_ascii=False),
+                    scene_id=shot_data.scene_id,
+                    prop_ids=json.dumps(shot_data.prop_ids, ensure_ascii=False),
+                    status="pending",
+                    clip_status="pending",
+                )
+                self._db.add(shot)
 
-        self._db.commit()
+            self._db.commit()
+        except Exception:
+            self._db.rollback()
+            raise
 
     async def update_asseting_progress(self, project_id: str, completed: int, total: int) -> None:
         """资产生成进度：20% 起，占 10% 区间。"""

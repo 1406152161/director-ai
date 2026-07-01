@@ -1,8 +1,12 @@
 # @author zhangzhihao
 """健康检查路由。"""
 
+import logging
+
 from fastapi import APIRouter, Query
 from sqlalchemy import text
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 
@@ -22,7 +26,9 @@ async def health_check(deep: bool = Query(False)) -> dict:
             conn.execute(text("SELECT 1"))
         checks["database"] = "ok"
     except Exception as exc:
-        checks["database"] = f"error: {exc}"
+        # 对外不暴露异常详情，仅记录日志
+        logger.warning("Health check database error: %s", exc)
+        checks["database"] = "unavailable"
         body["status"] = "degraded"
 
     try:
@@ -34,7 +40,8 @@ async def health_check(deep: bool = Query(False)) -> dict:
         client.ping()
         checks["redis"] = "ok"
     except Exception as exc:
-        checks["redis"] = f"error: {exc}"
+        logger.warning("Health check redis error: %s", exc)
+        checks["redis"] = "unavailable"
         body["status"] = "degraded"
 
     body["checks"] = checks
