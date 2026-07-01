@@ -473,6 +473,11 @@ async def run_novel_start_writing(novel_id: str, write_count: int = 3) -> None:
         if novel.status == "planned":
             novel_svc.update_status(novel_id, "writing", 20)
         elif novel.status != "writing":
+            logger.warning(
+                "跳过写作: novel %s 当前状态 %s，非 planned/writing",
+                novel_id,
+                novel.status,
+            )
             return
 
         try:

@@ -132,3 +132,124 @@ async def test_m2_pipeline_when_coherent_mode_false(gen_session_factory, monkeyp
     assert result is not None
     assert result.status == "completed"
     assert len(result.assets) == 0
+
+
+@pytest.mark.asyncio
+async def test_m3_chain_first_shot_skips_extract_last_frame(
+    gen_session_factory, monkeypatch, tmp_path
+):
+    """idx==0 时使用 shot.image_url，且不调用 extract_last_frame。"""
+    from app.providers.base import VideoResult
+    from app.services.tts_service import TTSSynthesisResult
+
+    extract_calls: list[object] = []
+    video_inputs: list[str] = []
+
+    class TrackingFFmpegService:
+        def compose_shot_clip(
+            self,
+            video_path,
+            audio_path,
+            narration_cn,
+            output_path,
+            target_duration,
+            target_width,
+            target_height,
+        ):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"clip")
+            return output_path
+
+        def compose_shot_video_only(
+            self,
+            video_path,
+            narration_cn,
+            output_path,
+            target_duration,
+            target_width,
+            target_height,
+        ):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"clip-video")
+            return output_path
+
+        def probe_duration(self, media_path, fallback=0.0):
+            return fallback
+
+        def concat_clips(self, clip_paths, output_path):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"final")
+            return output_path
+
+        def extract_last_frame(self, video_path, output_image_path):
+            extract_calls.append(video_path)
+            output_image_path.parent.mkdir(parents=True, exist_ok=True)
+            output_image_path.write_bytes(b"fake-jpeg")
+            return output_image_path
+
+        def concat_clips_xfade(self, clip_paths, output_path, xfade_duration=0.4):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"xfade-video")
+            return output_path
+
+        def build_continuous_audio(self, audio_paths, output_path):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"continuous-audio")
+            return output_path
+
+        def compose_final_with_continuous_audio(self, video_path, continuous_audio, output_path):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"final-audio")
+            return output_path
+
+    class TrackingVideoProvider:
+        async def image_to_video(self, image_url, prompt, duration, **kwargs):
+            video_inputs.append(image_url)
+            return VideoResult(url="https://example.com/mock-video.mp4", duration=duration)
+
+    class FakeTTSService:
+        async def synthesize(self, text, output_path, voice=None):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"fake-audio")
+            return TTSSynthesisResult(audio_path=output_path, duration=2.0)
+
+    monkeypatch.setattr(
+        "app.services.generation_service.SessionLocal", gen_session_factory
+    )
+    monkeypatch.setattr("app.services.generation_service.FFmpegService", TrackingFFmpegService)
+    monkeypatch.setattr("app.services.generation_service.TTSService", FakeTTSService)
+    monkeypatch.setattr(
+        "app.services.generation_service._outputs_root",
+        lambda: tmp_path / "outputs",
+    )
+    monkeypatch.setattr(
+        "app.services.generation_service.get_video_provider",
+        lambda: TrackingVideoProvider(),
+    )
+
+    async def fake_download(url, dest):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"fake-video")
+
+    monkeypatch.setattr("app.services.generation_service._download_file", fake_download)
+
+    session = gen_session_factory()
+    svc = ProjectService(session)
+    project = svc.create_project(
+        ProjectCreate(story="链式首镜测试", style="anime", duration=15, aspect_ratio="9:16")
+    )
+    session.close()
+
+    await run_generation(project.id)
+
+    session = gen_session_factory()
+    svc = ProjectService(session)
+    result = svc.get_project(project.id)
+    session.close()
+
+    assert result is not None
+    assert result.status == "completed"
+    assert len(result.shots) == 2
+    assert len(extract_calls) == 1
+    assert video_inputs[0] == result.shots[0].image_url
+    assert "chain_input.jpg" in video_inputs[1]
