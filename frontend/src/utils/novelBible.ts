@@ -96,6 +96,8 @@ export interface NovelBible {
   outline: NovelBibleOutlineItem[];
   foreshadowing?: NovelBibleForeshadowing[];
   beats?: Record<string, NovelBibleBeat[]>;
+  outline_truncated?: boolean;
+  outline_total?: number;
 }
 
 export function parseNovelBible(bibleJson: string): NovelBible {
@@ -115,6 +117,8 @@ export function parseNovelBible(bibleJson: string): NovelBible {
       outline: Array.isArray(raw.outline) ? raw.outline : [],
       foreshadowing: Array.isArray(raw.foreshadowing) ? raw.foreshadowing : [],
       beats: raw.beats ?? {},
+      outline_truncated: raw.outline_truncated,
+      outline_total: raw.outline_total,
     };
   } catch {
     return { world: '', facts: [], characters: [], outline: [], items: [] };

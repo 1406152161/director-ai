@@ -1504,3 +1504,89 @@
 .auth-page .create-form {
   max-width: 420px;
 }
+
+/* —— 响应式：平板 / 手机 —— */
+.nav-toggle {
+  display: none;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .nav-toggle {
+    display: inline-block;
+    margin-left: auto;
+  }
+
+  .app-nav-main {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.25rem;
+    padding-top: 0.5rem;
+  }
+
+  .app-nav-main.open {
+    display: flex;
+  }
+
+  .library-grid,
+  .hub-recent-grid,
+  .hub-progress-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .novel-workbench-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .novel-workbench-layout .novel-chapters-panel {
+    display: none;
+  }
+
+  .novel-workbench-layout.sidebar-open .novel-chapters-panel {
+    display: block;
+  }
+
+  .chapter-sidebar-toggle {
+    display: inline-flex;
+  }
+
+  .skeleton-content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .app-main {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .library-grid,
+  .hub-recent-grid,
+  .hub-progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body {
+    font-size: 1rem;
+  }
+
+  .page h1 {
+    font-size: 1.35rem;
+  }
+}
+
+.chapter-sidebar-toggle {
+  display: none;
+  margin-bottom: 0.5rem;
+}

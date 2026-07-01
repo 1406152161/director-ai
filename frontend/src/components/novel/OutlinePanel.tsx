@@ -265,6 +265,11 @@ export function OutlinePanel({
             {saving ? '保存中…' : usePaginated ? '保存本页大纲' : '保存大纲'}
           </button>
         )}
+        {bible.outline_truncated && (
+          <p className="placeholder-hint outline-truncation-hint">
+            仅展示前 500 章大纲，完整大纲请通过分页接口获取
+          </p>
+        )}
       </section>
     </div>
   );

@@ -11,7 +11,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useEffect } from 'react';
 
 import { listNovels, listProjects, retryProject } from '../api/client';
+import { CardSkeleton } from '../components/Skeleton';
 import { ProgressBar } from '../components/ProgressBar';
+import { useToastStore } from '../store/useToastStore';
 import { GENRE_LABEL, NOVEL_STATUS_LABEL } from '../utils/novelLabels';
 
 import { VIDEO_ASPECT_LABEL, VIDEO_STATUS_LABEL, VIDEO_STYLE_LABEL } from '../utils/videoLabels';
@@ -102,6 +104,8 @@ function LibraryPage() {
 
 
 
+  const showToast = useToastStore((s) => s.showToast);
+
   const retryMutation = useMutation({
 
     mutationFn: retryProject,
@@ -111,6 +115,8 @@ function LibraryPage() {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
 
     },
+
+    onError: (err) => showToast('error', (err as Error)?.message ?? '重试失败'),
 
   });
 
@@ -166,7 +172,7 @@ function LibraryPage() {
 
 
 
-      {isLoading && <p>加载中…</p>}
+      {isLoading && <CardSkeleton count={6} />}
 
 
 

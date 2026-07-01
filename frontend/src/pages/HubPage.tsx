@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
 import { listNovels, listProjects } from '../api/client';
+import { CardSkeleton } from '../components/Skeleton';
 import { ProgressBar } from '../components/ProgressBar';
 import { NOVEL_STATUS_LABEL } from '../utils/novelLabels';
 
@@ -204,7 +205,7 @@ function HubPage() {
 
 
 
-      {isLoading && <p>加载中…</p>}
+      {isLoading && <CardSkeleton count={3} />}
 
 
 

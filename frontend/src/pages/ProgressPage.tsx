@@ -13,6 +13,7 @@ import {
 } from '../utils/videoLabels';
 import { useCallback, useState } from 'react';
 import { LoadableImage, LoadableVideo } from '../components/MediaLoadable';
+import { ContentSkeleton } from '../components/Skeleton';
 import { ProgressBar } from '../components/ProgressBar';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -94,7 +95,7 @@ function ProgressPage() {
     return (
       <section className="page progress-page">
         <h1>创作进度</h1>
-        <p>加载中…</p>
+        <ContentSkeleton />
       </section>
     );
   }

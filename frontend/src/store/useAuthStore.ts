@@ -5,6 +5,15 @@ import { create } from 'zustand';
 
 const TOKEN_KEY = 'director-ai-token';
 
+/**
+ * SECURITY NOTE:
+ * JWT token 当前存储在 localStorage，存在 XSS 窃取风险。
+ * 当前阶段（本地/演示）可接受，上线前需迁移至：
+ * - 后端 /auth/login 返回 Set-Cookie（httpOnly + Secure + SameSite=Strict）
+ * - 前端不再手动管理 token，改为 withCredentials: true 自动携带 cookie
+ * - 添加 CSRF token 保护
+ * TODO: 上线前完成 cookie 迁移
+ */
 export interface AuthUser {
   id: string;
   email: string;

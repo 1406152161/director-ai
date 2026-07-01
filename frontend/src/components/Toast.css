@@ -1,0 +1,82 @@
+/**
+ * @author zhangzhihao
+ */
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(24rem, calc(100vw - 2rem));
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem 0.75rem;
+  align-items: start;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  animation: toast-in 0.25s ease-out;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+}
+
+.toast-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.toast-success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.toast-warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.toast-info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.toast-type {
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.toast-message {
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.toast-close {
+  border: none;
+  background: transparent;
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

@@ -11,7 +11,8 @@ import NovelWorkbenchPage from './pages/NovelWorkbenchPage';
 import ArticleCreatePage from './pages/ArticleCreatePage';
 import ArticlePreviewPage from './pages/ArticlePreviewPage';
 import LoginPage from './pages/LoginPage';
-import { useEffect, type ReactNode } from 'react';
+import { ToastContainer } from './components/Toast';
+import { useEffect, useState, type ReactNode } from 'react';
 import { fetchAuthStatus, fetchMe } from './api/client';
 import { useAuthStore } from './store/useAuthStore';
 import './App.css';
@@ -19,6 +20,7 @@ import './App.css';
 function AppHeader() {
   const location = useLocation();
   const path = location.pathname;
+  const [navOpen, setNavOpen] = useState(false);
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const authEnabled = useAuthStore((s) => s.authEnabled);
@@ -32,7 +34,16 @@ function AppHeader() {
       <Link to="/" className="logo">
         director-ai
       </Link>
-      <nav className="app-nav-main">
+      <button
+        type="button"
+        className="nav-toggle"
+        aria-label="打开导航菜单"
+        aria-expanded={navOpen}
+        onClick={() => setNavOpen((open) => !open)}
+      >
+        ☰
+      </button>
+      <nav className={`app-nav-main ${navOpen ? 'open' : ''}`}>
         <Link to="/" className={path === '/' ? 'nav-link active' : 'nav-link'}>
           首页
         </Link>
@@ -91,6 +102,7 @@ function App() {
     <div className="app">
       <AppBootstrap>
         <AppHeader />
+        <ToastContainer />
         <main className="app-main">
           <Routes>
             <Route path="/" element={<HubPage />} />
