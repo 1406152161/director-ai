@@ -7,15 +7,35 @@
 
 ### 新增
 
-- **M4a 小说线**：顶栏视频/小说/图文 Tab；题材模板（玄幻/都市/悬疑/甜宠/科幻）；规划大纲 + Story Bible + 自动前 3 章；Chroma 向量记忆续写；侧栏改稿对话；站内阅读器 + 导出 MD/TXT
-- DeepSeek / 智谱 OpenAI 兼容 LLM Provider；`get_novel_llm_provider()` 独立配置 `NOVEL_LLM_PROVIDER`
-- 新表 `novels` / `novel_chapters`；API `/api/novels` 全套；前端 `/novel` 创作页与 `/novel/:id` 工作台
-- **M3 资产一致性（M3b）**：脚本输出 `assets` 清单（角色/场景/道具），`AssetService` 文生图设定参考，关键帧 `image_to_image` 图生图
-- **M3 镜头连贯性（M3a）**：串行链式真实尾帧衔接、xfade 0.4s 交叉淡化、连续旁白音轨合成
-- 新表 `assets`、Shot 扩展 `character_ids/scene_id/prop_ids`
-- 启动时幂等迁移 `app/core/migrate.py`（自动补表/补列）
-- 配置项 `COHERENT_MODE`（默认 true）、`XFADE_DURATION`（默认 0.4）
-- 前端进度页「导演设定」资产卡片网格 + `asseting` 状态展示
+- **U1 重写本章**：`POST .../chapters/{index}/rewrite` + 工作台按钮
+- **U2 Beat 折叠**：正文 Tab 下场景 beat 可展开
+- **U3 卷弧/伏笔 PATCH**：世界观 Tab 表单编辑 + API 字段
+- **U4 规划导航**：工作台左栏「目录 / 规划」切换（planned 态默认规划）+ 分区滚动定位
+- **T1–T2/T4–T6** 测试：approve 全流程、chat outline sync、rewrite、replan、retry-plan、framework sync（含道具 PATCH）
+- **UX**：视频创建页 API 失败提示；测试库 SQLite StaticPool 修复 client+db_session 一致性
+- **A3 SSE**：`/api/projects|novels/{id}/events` 推送进度，前端 EventSource 替代 2s 轮询（失败时降级）
+- **A2 Celery**：`USE_CELERY` 开关 + 7 个 director.* 任务，API 经 `task_dispatch` 统一调度
+- **阶段 6**：ProgressHub Redis pub/sub、视频 retry、小说测试/UX、SSE 重连、DELETE 作品、Alembic 骨架
+- **阶段 5**：JWT 鉴权骨架、图文 API/前端、视频质量 prompt 优化、PostgreSQL 文档
+- **E5/D1**：`docs/deployment.md`、README 快速开始、根 `.env.example` 索引
+- **M6 千章规划**：L0/L1/L2 分层、`novel_outline_items` 表、outline 分页 API、规划 checkpoint 续跑
+- **M5 平台 UX**：Hub 首页、作品库 Tab、规划确认流、工作台三 Tab、大纲 50 章/页
+- **M4c 质量线**：写后校验、自动重写、needs_review 拦截、实体/框架 hybrid 检索、智谱 embedding
+- **M4a+**：卷/弧/beat/伏笔/planned 写作流
+- **P0 outline SSOT**：`sync_bible_indexes`、Replan/Chat 与 DB 大纲同步
+- **Agent 协作**：三角色 rules/skills（设计 / 执行 / 验收）
+- **执行计划**：`docs/execution-plan.md`
+
+### 变更
+
+- 小说规划：`bible_json.outline` 规划完成后为空，SSOT 在 DB
+- `retry-plan` 断点续跑，保留已生成大纲
+
+### 新增（历史 · M4a / M3）
+
+- **M4a 小说线**：顶栏视频/小说/图文 Tab；题材模板；Chroma 向量记忆续写；侧栏改稿对话；导出 MD/TXT
+- DeepSeek / 智谱 LLM Provider；`/api/novels` 全套
+- **M3 资产一致性 + 镜头连贯性**：coherent_mode、xfade、图生图链式尾帧
 
 ### 变更
 

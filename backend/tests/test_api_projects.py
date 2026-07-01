@@ -51,3 +51,62 @@ def test_list_projects(client):
     stories = {p["story"] for p in projects}
     assert "作品A" in stories
     assert "作品B" in stories
+
+
+def test_retry_failed_project(client, db_session):
+    from app.schemas.project import ProjectCreate
+    from app.services.project_service import ProjectService
+
+    svc = ProjectService(db_session)
+    project = svc.create_project(
+        ProjectCreate(
+            story="retry 失败项目测试",
+            style="vlog",
+            duration=15,
+            aspect_ratio="9:16",
+        )
+    )
+    project_id = project.id
+    svc.set_failed(project_id, "mock generation failure")
+
+    retry_resp = client.post(f"/api/projects/{project_id}/retry")
+    assert retry_resp.status_code == 200
+    assert retry_resp.json()["status"] == "pending"
+    assert retry_resp.json()["error"] in (None, "")
+
+    deadline = time.time() + 30.0
+    while time.time() < deadline:
+        body = client.get(f"/api/projects/{project_id}").json()
+        if body["status"] in ("completed", "failed"):
+            break
+        time.sleep(0.2)
+
+    assert body["status"] == "completed", body.get("error")
+
+
+def test_delete_completed_project(client, db_session):
+    from app.schemas.project import ProjectCreate
+    from app.services.project_service import ProjectService
+
+    svc = ProjectService(db_session)
+    project = svc.create_project(
+        ProjectCreate(story="待删项目", style="vlog", duration=15, aspect_ratio="9:16")
+    )
+    project_id = project.id
+    svc.update_status(project_id, "completed", progress=100)
+
+    resp = client.delete(f"/api/projects/{project_id}")
+    assert resp.status_code == 204
+    assert client.get(f"/api/projects/{project_id}").status_code == 404
+
+
+def test_delete_active_project_conflict(client, db_session):
+    from app.schemas.project import ProjectCreate
+    from app.services.project_service import ProjectService
+
+    svc = ProjectService(db_session)
+    project = svc.create_project(
+        ProjectCreate(story="进行中", style="vlog", duration=15, aspect_ratio="9:16")
+    )
+    resp = client.delete(f"/api/projects/{project.id}")
+    assert resp.status_code == 409

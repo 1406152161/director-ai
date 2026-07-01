@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     novel_initial_chapters: int = 3
     novel_target_words_min: int = 2500
     novel_target_words_max: int = 3500
+    novel_replan_interval: int = 10
+    # 小说向量：auto | deepseek | zhipu | local_hash（test 固定 local_hash）
+    novel_embedding_provider: str = "auto"
+    deepseek_embedding_model: str = "deepseek-embedding"
+    zhipu_embedding_model: str = "embedding-2"
 
     # Agnes AI
     agnes_api_key: str = ""
@@ -67,6 +72,16 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
+    # true：长任务走 Celery；false：FastAPI BackgroundTasks（本地/测试默认）
+    use_celery: bool = False
+
+    # 鉴权（默认关闭，本地/测试零门槛）
+    auth_enabled: bool = False
+    jwt_secret: str = "dev-change-me-in-production"
+    jwt_expire_minutes: int = 60 * 24 * 7
+
+    # PostgreSQL + pgvector（可选，生产多实例）
+    pgvector_enabled: bool = False
 
 
 @lru_cache

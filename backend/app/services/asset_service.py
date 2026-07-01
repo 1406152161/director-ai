@@ -37,12 +37,13 @@ class AssetService:
         async def _generate_one(item: dict) -> None:
             nonlocal completed
             asset_key = item["asset_key"]
-            prompt = item.get("description_en", "").strip() or item.get("name_cn", "")
+            base = item.get("description_en", "").strip() or item.get("name_cn", "")
+            prompt = (
+                f"{base}, character design reference sheet, front view, "
+                "consistent appearance across shots, high detail"
+            )
             async with semaphore:
-                result = await self._image.text_to_image(
-                    f"{prompt}, character design sheet, consistent appearance, high detail",
-                    size=size,
-                )
+                result = await self._image.text_to_image(prompt, size=size)
                 async with lock:
                     results[asset_key] = result.url
                     completed += 1

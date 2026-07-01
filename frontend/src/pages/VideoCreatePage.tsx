@@ -3,6 +3,7 @@
  */
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { createProject, fetchHealth } from '../api/client';
 import { useAppStore } from '../store/useAppStore';
 
@@ -21,11 +22,18 @@ const ASPECT_OPTIONS = [
   { value: '1:1', label: '方形 1:1' },
 ];
 
-function HomePage() {
+const STORY_MAX = 200;
+
+function VideoCreatePage() {
   const navigate = useNavigate();
   const { draft, setDraft } = useAppStore();
+  const [showEmptyHint, setShowEmptyHint] = useState(false);
 
-  const { data: health } = useQuery({
+  const {
+    data: health,
+    isError: healthError,
+    error: healthFetchError,
+  } = useQuery({
     queryKey: ['health'],
     queryFn: fetchHealth,
     retry: false,
@@ -34,15 +42,22 @@ function HomePage() {
   const createMutation = useMutation({
     mutationFn: createProject,
     onSuccess: (project) => {
-      navigate(`/progress/${project.id}`);
+      navigate(`/video/progress/${project.id}`);
     },
   });
 
+  const storyTrimmed = draft.story.trim();
+  const storyLen = draft.story.length;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!draft.story.trim()) return;
+    if (!storyTrimmed) {
+      setShowEmptyHint(true);
+      return;
+    }
+    setShowEmptyHint(false);
     createMutation.mutate({
-      story: draft.story,
+      story: storyTrimmed,
       style: draft.style,
       duration: draft.duration,
       aspect_ratio: draft.aspectRatio,
@@ -56,7 +71,12 @@ function HomePage() {
 
       {health && (
         <p className="health-badge" data-status={health.status}>
-          后端状态: {health.status}
+          后端已连接
+        </p>
+      )}
+      {healthError && (
+        <p className="form-error health-offline" role="alert">
+          无法连接后端：{(healthFetchError as Error)?.message ?? '请确认 API 已启动'}
         </p>
       )}
 
@@ -65,11 +85,22 @@ function HomePage() {
         <textarea
           id="story"
           rows={4}
-          maxLength={200}
+          maxLength={STORY_MAX}
           placeholder="例如：一只橘猫在雨夜穿越霓虹灯下的东京街头……"
           value={draft.story}
-          onChange={(e) => setDraft({ story: e.target.value })}
+          onChange={(e) => {
+            setDraft({ story: e.target.value });
+            if (e.target.value.trim()) setShowEmptyHint(false);
+          }}
         />
+        <p className="char-count">
+          {storyLen}/{STORY_MAX}
+        </p>
+        {showEmptyHint && !storyTrimmed && (
+          <p className="form-hint form-error" role="alert">
+            请先输入创意描述再开始创作
+          </p>
+        )}
 
         <div className="form-row">
           <label htmlFor="style">视觉风格</label>
@@ -116,12 +147,21 @@ function HomePage() {
           </select>
         </div>
 
-        <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={createMutation.isPending || healthError || !storyTrimmed}
+        >
           {createMutation.isPending ? '提交中…' : '开始创作'}
         </button>
+        {createMutation.isError && (
+          <p className="form-error" role="alert">
+            创建失败：{(createMutation.error as Error)?.message ?? '请稍后重试'}
+          </p>
+        )}
       </form>
     </section>
   );
 }
 
-export default HomePage;
+export default VideoCreatePage;

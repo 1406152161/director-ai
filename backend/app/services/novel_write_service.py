@@ -1,12 +1,22 @@
 # @author zhangzhihao
 """小说章节写作与摘要生成。"""
 
+from typing import Any
+
 from app.core.config import Settings, get_settings
-from app.novel.prompts import build_summary_system_prompt, build_write_system_prompt, genre_label
+from app.novel.prompts import (
+    build_rewrite_system_prompt,
+    build_summary_system_prompt,
+    build_write_system_prompt,
+    genre_label,
+)
 from app.novel.utils import count_chinese_words
 from app.providers.base import Message
 from app.providers.registry import get_novel_llm_provider
-from app.services.novel_memory_service import bible_to_prompt_summary
+from app.services.novel_prompt_builder import (
+    build_layered_rewrite_context,
+    build_layered_write_context,
+)
 
 
 class NovelWriteService:
@@ -24,26 +34,28 @@ class NovelWriteService:
         chapter_outline: dict,
         memory_snippets: list[str],
         prev_tail: str = "",
+        beats: list[dict[str, Any]] | None = None,
+        foreshadowing: list[dict[str, Any]] | None = None,
+        entities_prompt: str = "",
+        framework_snippets: list[str] | None = None,
+        plant_snippets: list[dict[str, Any]] | None = None,
     ) -> tuple[str, str, int]:
         """写一章正文并生成摘要，返回 (content, summary, word_count)。"""
         idx = chapter_outline.get("index", 1)
-        title = chapter_outline.get("title", f"第{idx}章")
-        summary_hint = chapter_outline.get("summary", "")
-
-        bible_ctx = bible_to_prompt_summary(bible)
-        memory_ctx = "\n".join(f"- {s}" for s in memory_snippets) if memory_snippets else "（暂无）"
-        prev_ctx = prev_tail[-500:] if prev_tail else "（首章无前文）"
-
-        user_prompt = (
-            f"创意：{premise}\n"
-            f"题材：{genre_label(genre)}\n\n"
-            f"Story Bible：\n{bible_ctx}\n\n"
-            f"相关记忆片段：\n{memory_ctx}\n\n"
-            f"本章大纲：第{idx}章《{title}》\n{summary_hint}\n\n"
-            f"上一章末尾：\n{prev_ctx}\n\n"
-            f"请撰写第{idx}章正文。"
+        user_prompt = build_layered_write_context(
+            premise=premise,
+            genre_label=genre_label(genre),
+            bible=bible,
+            chapter_index=idx,
+            outline=chapter_outline,
+            beats=beats or [],
+            foreshadowing=foreshadowing or [],
+            entities_prompt=entities_prompt,
+            framework_snippets=framework_snippets or [],
+            memory_snippets=memory_snippets,
+            prev_tail=prev_tail,
+            plant_snippets=plant_snippets or [],
         )
-
         system = build_write_system_prompt(
             genre,
             self._settings.novel_target_words_min,
@@ -55,7 +67,61 @@ class NovelWriteService:
         )
         content = content.strip()
         word_count = count_chinese_words(content)
+        title = chapter_outline.get("title", f"第{idx}章")
+        summary = await self._generate_summary(title, content)
+        return content, summary, word_count
 
+    async def rewrite_chapter(
+        self,
+        premise: str,
+        genre: str,
+        bible: dict,
+        chapter_outline: dict,
+        memory_snippets: list[str],
+        prev_tail: str,
+        beats: list[dict[str, Any]] | None,
+        foreshadowing: list[dict[str, Any]] | None,
+        previous_content: str,
+        issues: list[str],
+        entities_prompt: str = "",
+        framework_snippets: list[str] | None = None,
+        plant_snippets: list[dict[str, Any]] | None = None,
+    ) -> tuple[str, str, int]:
+        """校验失败后修订重写。"""
+        idx = chapter_outline.get("index", 1)
+        title = chapter_outline.get("title", f"第{idx}章")
+        layered = build_layered_write_context(
+            premise=premise,
+            genre_label=genre_label(genre),
+            bible=bible,
+            chapter_index=idx,
+            outline=chapter_outline,
+            beats=beats or [],
+            foreshadowing=foreshadowing or [],
+            entities_prompt=entities_prompt,
+            framework_snippets=framework_snippets or [],
+            memory_snippets=memory_snippets,
+            prev_tail=prev_tail,
+            plant_snippets=plant_snippets or [],
+        )
+        user_prompt = build_layered_rewrite_context(
+            premise=premise,
+            genre_label=genre_label(genre),
+            layered_base=layered,
+            issues=issues,
+            previous_content=previous_content,
+        )
+        system = build_rewrite_system_prompt(
+            genre,
+            self._settings.novel_target_words_min,
+            self._settings.novel_target_words_max,
+        )
+        content = await self._llm.chat(
+            [Message("system", system), Message("user", user_prompt)],
+            max_tokens=8192,
+        )
+        content = content.strip()
+        word_count = count_chinese_words(content)
         summary = await self._generate_summary(title, content)
         return content, summary, word_count
 

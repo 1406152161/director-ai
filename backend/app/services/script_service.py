@@ -141,6 +141,10 @@ def _build_script_prompt(story: str, style: str, duration: int, shot_count: int)
    （如 anime style、cinematic 等），且必须与创意文字中的风格一致
 4. 风格优先级：创意中明确表达的风格（如「动漫版」「anime」「写实」等）为最高优先；
    仅当创意未提及风格时，才参考上述视觉风格参数
+5. 镜头叙事连贯：相邻镜头之间动作/位置/时间应可衔接；
+   - 下一镜 image_prompt_en 应承接上一镜结束状态（例：上一镜「猫在街角」，下一镜「猫踏入霓虹 alley」）
+   - motion_prompt_en 避免与上一镜方向/动作矛盾
+   - narration_cn 旁白按时间顺序推进，避免重复或跳切
 """
 
 

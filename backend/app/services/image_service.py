@@ -24,11 +24,20 @@ class ImageService:
             return "high detail"
         return f"{prompt}, high detail"
 
+    def _global_subject_anchor(self, assets: AssetsData) -> str:
+        if assets.characters:
+            return assets.characters[0].description_en.strip()
+        return ""
+
     def _build_keyframe_prompt(
         self, shot: ShotData, assets: AssetsData, style: str
     ) -> str:
-        """关键帧提示词 = 镜头 prompt + 关联资产外观摘要。"""
-        parts = [self._build_prompt(shot, style)]
+        """关键帧提示词 = 全局主体锚点 + 镜头 prompt + 关联资产外观摘要。"""
+        parts: list[str] = []
+        anchor = self._global_subject_anchor(assets)
+        if anchor:
+            parts.append(f"global subject anchor: {anchor}")
+        parts.append(self._build_prompt(shot, style))
         asset_map = {a.id: a.description_en for a in assets.characters}
         asset_map.update({a.id: a.description_en for a in assets.scenes})
         asset_map.update({a.id: a.description_en for a in assets.props})

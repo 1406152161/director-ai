@@ -36,12 +36,20 @@ def test_run_migrations_creates_assets_table():
 def test_run_migrations_idempotent():
     engine = MagicMock()
     inspector = MagicMock()
-    inspector.get_table_names.return_value = ["projects", "shots", "assets", "novels", "novel_chapters"]
+    inspector.get_table_names.return_value = [
+        "projects", "shots", "assets", "novels", "novel_chapters",
+        "novel_entities", "novel_framework_items", "novel_outline_items",
+        "tenants", "users", "articles",
+    ]
     inspector.get_columns.return_value = [
         {"name": "id"},
         {"name": "character_ids"},
         {"name": "scene_id"},
         {"name": "prop_ids"},
+        {"name": "owner_id"},
+        {"name": "validation_status"},
+        {"name": "validation_score"},
+        {"name": "validation_issues"},
     ]
 
     with pytest.MonkeyPatch.context() as mp:

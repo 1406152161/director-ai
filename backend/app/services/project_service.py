@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.asset import Asset
 from app.models.project import Project, Shot
 from app.schemas.project import AssetResponse, ProjectCreate, ProjectListItem, ProjectResponse, ShotResponse
+from app.services.progress_hub import emit_progress
 from app.services.script_service import AssetsData, ShotData
 
 
@@ -17,7 +18,7 @@ class ProjectService:
     def __init__(self, db: Session) -> None:
         self._db = db
 
-    def create_project(self, body: ProjectCreate) -> Project:
+    def create_project(self, body: ProjectCreate, owner_id: str | None = None) -> Project:
         project = Project(
             story=body.story,
             style=body.style,
@@ -25,6 +26,7 @@ class ProjectService:
             aspect_ratio=body.aspect_ratio,
             status="pending",
             progress=0,
+            owner_id=owner_id,
         )
         self._db.add(project)
         self._db.commit()
@@ -39,8 +41,11 @@ class ProjectService:
             .first()
         )
 
-    def list_projects(self) -> list[Project]:
-        return self._db.query(Project).order_by(Project.created_at.desc()).all()
+    def list_projects(self, owner_id: str | None = None) -> list[Project]:
+        q = self._db.query(Project).order_by(Project.created_at.desc())
+        if owner_id:
+            q = q.filter(Project.owner_id == owner_id)
+        return q.all()
 
     def update_status(self, project_id: str, status: str, progress: int | None = None) -> None:
         project = self._db.query(Project).filter(Project.id == project_id).first()
@@ -50,6 +55,7 @@ class ProjectService:
         if progress is not None:
             project.progress = progress
         self._db.commit()
+        emit_progress("project", project_id, status=project.status, progress=project.progress, error=project.error)
 
     def set_failed(self, project_id: str, error: str) -> None:
         project = self._db.query(Project).filter(Project.id == project_id).first()
@@ -58,6 +64,29 @@ class ProjectService:
         project.status = "failed"
         project.error = error
         self._db.commit()
+        emit_progress("project", project_id, status="failed", progress=project.progress, error=error)
+
+    def reset_for_retry(self, project_id: str) -> None:
+        project = self._db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            return
+        project.status = "pending"
+        project.progress = 0
+        project.error = None
+        self._db.commit()
+        emit_progress("project", project_id, status="pending", progress=0, error=None)
+
+    _ACTIVE_STATUSES = frozenset({"pending", "script", "images", "videos", "composing"})
+
+    def delete_project(self, project_id: str) -> bool:
+        project = self.get_project(project_id)
+        if not project:
+            return False
+        if project.status in self._ACTIVE_STATUSES:
+            raise ValueError("进行中的项目不可删除")
+        self._db.delete(project)
+        self._db.commit()
+        return True
 
     def save_script(
         self,
@@ -217,6 +246,7 @@ class ProjectService:
         project.progress = 100
         project.output_url = output_url
         self._db.commit()
+        emit_progress("project", project_id, status="completed", progress=100, error=None)
 
     @staticmethod
     def to_response(project: Project) -> ProjectResponse:

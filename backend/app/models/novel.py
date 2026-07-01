@@ -28,6 +28,7 @@ class Novel(Base):
     status: Mapped[str] = mapped_column(String(16), default="pending")
     progress: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     chapters: Mapped[list["NovelChapter"]] = relationship(
@@ -51,5 +52,8 @@ class NovelChapter(Base):
     summary: Mapped[str] = mapped_column(Text, default="")
     word_count: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(16), default="pending")
+    validation_status: Mapped[str] = mapped_column(String(16), default="pending")
+    validation_score: Mapped[int] = mapped_column(Integer, default=0)
+    validation_issues: Mapped[str] = mapped_column(Text, default="[]")
 
     novel: Mapped["Novel"] = relationship("Novel", back_populates="chapters")

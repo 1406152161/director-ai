@@ -6,26 +6,26 @@
 
 | 项 | 现状 | 优先级 | 备注 |
 |----|------|--------|------|
-| 角色/场景/道具跨镜一致性 | 有改善，用户反馈仍不足 | P1 | 图生图参考策略、资产 prompt、可选三视图 |
-| 段间音画微同步 | 硬切感已减轻，仍有轻微不同步 | P2 | xfade 时长、连续旁白时间轴、链式尾帧策略 |
+| 角色/场景/道具跨镜一致性 | 资产三视图 prompt + 全局主体锚点 | P1 | 图生图参考策略已加强 |
+| 段间音画微同步 | xfade + apad 连续旁白 | P2 | 成片混音 apad 对齐 |
 | 单段画面僵硬感 | Agnes 免费模型天花板 | P3 | 接付费 SOTA 视频 API 时跃迁 |
-| 分镜叙事连贯 | 依赖 LLM 分镜质量 | P2 | 相邻镜头动作承接 prompt |
+| 分镜叙事连贯 | 相邻镜头承接 prompt 约束 | P2 | script_service 已补充 |
 
 ## 工程稳健性
 
 | 项 | 现状 | 优先级 | 备注 |
 |----|------|--------|------|
-| 任务队列 Celery + Redis | BackgroundTasks | P2 | 重启不丢、可扩展，产品规模化时需要 |
+| 任务队列 Celery + Redis | `USE_CELERY=true` + Worker | 完成 | 默认仍 BackgroundTasks |
 | 媒资下载失败 | 已加重试 + Agnes 鉴权 | 监控 | 弱网/CDN 偶发仍可能失败 |
 | DB 迁移 | 启动 auto migrate（SQLite） | P2 | 上 PostgreSQL 时需正式 migration |
-| SSE/WebSocket 实时进度 | 前端轮询 2s | P2 | 体验优化 |
+| SSE/WebSocket 实时进度 | 工作台 SSE + 轮询降级 | 完成 | ProgressPage / NovelWorkbench |
 
 ## 前端 / 体验小项
 
 | 项 | 现状 | 优先级 | 备注 |
 |----|------|--------|------|
 | 成片下载链接 | 已修 Vite `/outputs` 代理 | 完成 | dev 需重启 frontend |
-| 空输入 / API 失败提示 | 部分静默 | P2 | HomePage UX |
+| 空输入 / API 失败提示 | 创建页 + 进度页 + 作品库 | 完成 | 后端离线、错误 detail、失败引导 |
 | 生产环境 `VITE_API_BASE` | 有 `.env.example` | P1 | 部署时必须配置 |
 
 ## 明确不在「质量债」里、属于产品线的

@@ -29,6 +29,7 @@ class Project(Base):
     title: Mapped[str | None] = mapped_column(String(256), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     shots: Mapped[list["Shot"]] = relationship(

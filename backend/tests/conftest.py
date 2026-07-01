@@ -7,9 +7,13 @@ import os
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("LLM_PROVIDER", "mock")
 os.environ.setdefault("NOVEL_LLM_PROVIDER", "mock")
+os.environ.setdefault("NOVEL_EMBEDDING_PROVIDER", "local_hash")
 os.environ.setdefault("IMAGE_PROVIDER", "mock")
 os.environ.setdefault("VIDEO_PROVIDER", "mock")
+os.environ.setdefault("TTS_PROVIDER", "mock")
 os.environ.setdefault("COHERENT_MODE", "true")
+os.environ.setdefault("USE_CELERY", "false")
+os.environ.setdefault("AUTH_ENABLED", "false")
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 import app.models  # noqa: F401 — 注册 ORM 模型
@@ -22,6 +26,7 @@ from app.providers.registry import clear_provider_cache
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
@@ -135,7 +140,11 @@ def _reset_provider_cache():
 
 @pytest.fixture
 def db_engine():
-    engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(bind=engine)
     from app.core.migrate import run_migrations  # noqa: PLC0415
 
