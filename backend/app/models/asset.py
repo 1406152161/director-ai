@@ -2,11 +2,15 @@
 """导演设定资产 ORM 模型（角色 / 场景 / 道具）。"""
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.project import Project
 
 
 class Asset(Base):

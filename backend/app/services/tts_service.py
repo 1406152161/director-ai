@@ -41,28 +41,37 @@ class TTSService:
         communicate = edge_tts.Communicate(text, voice)
         await communicate.save(str(output_path))
 
-        duration = self._estimate_duration(text, output_path)
+        duration = self._probe_audio_duration(output_path)
+        if duration <= 0:
+            duration = max(1.0, len(text.strip()) * 0.25)
         logger.info("TTS 合成完成 voice=%s duration=%.2fs path=%s", voice, duration, output_path)
         return TTSSynthesisResult(audio_path=output_path, duration=duration)
 
-    def _estimate_duration(self, text: str, audio_path: Path) -> float:
-        """估算音频时长：优先 ffprobe，回退按字数估算。"""
+    def _probe_audio_duration(self, audio_path: Path) -> float:
+        """用 ffprobe 读取实际音频时长（秒）。"""
         ffprobe = shutil.which("ffprobe")
-        if ffprobe:
-            try:
-                result = subprocess.run(
-                    [
-                        ffprobe,
-                        "-v", "error",
-                        "-show_entries", "format=duration",
-                        "-of", "default=noprint_wrappers=1:nokey=1",
-                        str(audio_path),
-                    ],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                return max(0.5, float(result.stdout.strip()))
-            except (subprocess.CalledProcessError, ValueError):
-                pass
+        if not ffprobe or not audio_path.exists():
+            return 0.0
+        try:
+            result = subprocess.run(
+                [
+                    ffprobe,
+                    "-v", "error",
+                    "-show_entries", "format=duration",
+                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    str(audio_path),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return max(0.1, float(result.stdout.strip()))
+        except (subprocess.CalledProcessError, ValueError):
+            return 0.0
+
+    def _estimate_duration(self, text: str, audio_path: Path) -> float:
+        """兼容旧调用：优先 ffprobe 实际时长。"""
+        probed = self._probe_audio_duration(audio_path)
+        if probed > 0:
+            return probed
         return max(1.0, len(text.strip()) * 0.25)

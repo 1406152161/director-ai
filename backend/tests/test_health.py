@@ -15,3 +15,13 @@ async def test_health_returns_ok():
     data = response.json()
     assert data["status"] == "ok"
     assert data["service"] == "director-ai"
+
+
+def test_health_deep_returns_checks(client):
+    resp = client.get("/api/health?deep=true")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["service"] == "director-ai"
+    assert "checks" in data
+    assert data["checks"]["database"] == "ok"
+    assert "redis" in data["checks"]

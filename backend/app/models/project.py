@@ -2,16 +2,16 @@
 """项目与分镜镜头 ORM 模型。"""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
+from app.models.base import Base, _utcnow
 
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+if TYPE_CHECKING:
+    from app.models.asset import Asset
 
 
 class Project(Base):
@@ -29,6 +29,7 @@ class Project(Base):
     title: Mapped[str | None] = mapped_column(String(256), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     shots: Mapped[list["Shot"]] = relationship(

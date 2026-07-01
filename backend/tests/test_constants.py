@@ -43,3 +43,4 @@ def test_duration_to_num_frames():
 
     assert duration_to_num_frames(5) == 121
     assert duration_to_num_frames(3) == 81
+    assert duration_to_num_frames(3, frame_rate=24, max_frames=50) == 49

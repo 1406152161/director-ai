@@ -1,9 +1,8 @@
 # @author zhangzhihao
 """media_download 单元测试。"""
 
-import pytest
 import httpx
-
+import pytest
 from app.providers.exceptions import ProviderError
 from app.utils.media_download import download_media_file
 

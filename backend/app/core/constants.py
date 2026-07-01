@@ -63,5 +63,7 @@ def duration_to_num_frames(
     target = max(1, seconds) * frame_rate
     candidates = [f for f in VALID_VIDEO_FRAME_COUNTS if f <= max_frames]
     if not candidates:
-        return VALID_VIDEO_FRAME_COUNTS[0]
+        # max_frames 低于 81 时，取不超过上限的最大 8n+1 帧数
+        capped = ((max_frames - 1) // 8) * 8 + 1
+        return max(9, min(capped, max_frames))
     return min(candidates, key=lambda f: abs(f - target))

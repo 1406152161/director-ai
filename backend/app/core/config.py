@@ -2,8 +2,14 @@
 """应用配置，从环境变量 / .env 读取。"""
 
 from functools import lru_cache
+from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+# 默认 SQLite 固定在 backend 根目录，避免 cwd 变化导致库文件漂移
+_DEFAULT_SQLITE = f"sqlite:///{(_BACKEND_ROOT / 'director_ai.db').as_posix()}"
 
 
 class Settings(BaseSettings):
@@ -24,6 +30,24 @@ class Settings(BaseSettings):
     image_provider: str = "mock"
     video_provider: str = "mock"
     tts_provider: str = "mock"
+
+    # 小说线 LLM（与视频线独立）
+    novel_llm_provider: str = "deepseek"
+    deepseek_api_key: str = ""
+    deepseek_api_base: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-chat"
+    zhipu_api_key: str = ""
+    zhipu_api_base: str = "https://open.bigmodel.cn/api/paas/v4"
+    zhipu_model: str = "glm-4-flash"
+    chroma_persist_dir: str = "./data/chroma"
+    novel_initial_chapters: int = 3
+    novel_target_words_min: int = 2500
+    novel_target_words_max: int = 3500
+    novel_replan_interval: int = 10
+    # 小说向量：auto | deepseek | zhipu | local_hash（test 固定 local_hash）
+    novel_embedding_provider: str = "auto"
+    deepseek_embedding_model: str = "deepseek-embedding"
+    zhipu_embedding_model: str = "embedding-2"
 
     # Agnes AI
     agnes_api_key: str = ""
@@ -49,11 +73,38 @@ class Settings(BaseSettings):
     outputs_dir: str = "outputs"
     ffmpeg_font_path: str = ""
 
-    # 数据库与队列
-    database_url: str = "sqlite:///./director_ai.db"
+    # 数据库与队列（默认 SQLite 路径相对 backend 根目录，避免 cwd 变化）
+    database_url: str = _DEFAULT_SQLITE
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
+    # true：长任务走 Celery；false：FastAPI BackgroundTasks（本地/测试默认）
+    use_celery: bool = False
+
+    # 鉴权（默认关闭，本地/测试零门槛）
+    auth_enabled: bool = False
+    jwt_secret: str = "dev-change-me-in-production"
+    jwt_expire_minutes: int = 60 * 24 * 7
+
+    # PostgreSQL + pgvector（可选，生产多实例）
+    pgvector_enabled: bool = False
+
+    @model_validator(mode="after")
+    def resolve_paths(self) -> "Settings":
+        for field in ("chroma_persist_dir", "outputs_dir"):
+            val = getattr(self, field)
+            if val and not Path(val).is_absolute():
+                setattr(self, field, str(_BACKEND_ROOT / val))
+        return self
+
+    @model_validator(mode="after")
+    def check_jwt_secret(self) -> "Settings":
+        # 启动时 fail-fast，避免生产误用默认密钥
+        if self.auth_enabled and self.jwt_secret == "dev-change-me-in-production":
+            raise ValueError(
+                "生产环境开启 auth_enabled 时必须设置 JWT_SECRET 环境变量，不可使用默认值"
+            )
+        return self
 
 
 @lru_cache

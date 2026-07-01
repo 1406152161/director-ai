@@ -14,11 +14,14 @@ git checkout dev
 git pull origin dev
 ```
 
-3. 复制环境变量模板（后端模块就绪后使用）：
+3. 复制环境变量模板（**仅模板，勿提交真实 `.env`**）：
 
 ```bash
-cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env   # 可选，生产构建时需要 VITE_API_BASE
 ```
+
+在 `backend/.env` 中填入 API Key 等敏感信息；`.env` 已被 `.gitignore` 忽略。详见 [SECURITY.md](SECURITY.md) 与 [docs/deployment.md](docs/deployment.md)。
 
 4. 阅读 [docs/branch-strategy.md](docs/branch-strategy.md) 了解分支与发布流程。
 

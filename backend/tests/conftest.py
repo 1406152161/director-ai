@@ -4,10 +4,16 @@
 import os
 
 # 必须在导入 app 之前设置，确保测试不依赖真实 API Key
+os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("LLM_PROVIDER", "mock")
+os.environ.setdefault("NOVEL_LLM_PROVIDER", "mock")
+os.environ.setdefault("NOVEL_EMBEDDING_PROVIDER", "local_hash")
 os.environ.setdefault("IMAGE_PROVIDER", "mock")
 os.environ.setdefault("VIDEO_PROVIDER", "mock")
+os.environ.setdefault("TTS_PROVIDER", "mock")
 os.environ.setdefault("COHERENT_MODE", "true")
+os.environ.setdefault("USE_CELERY", "false")
+os.environ.setdefault("AUTH_ENABLED", "false")
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 import app.models  # noqa: F401 — 注册 ORM 模型
@@ -20,6 +26,7 @@ from app.providers.registry import clear_provider_cache
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
@@ -110,6 +117,30 @@ def _mock_m2_services(monkeypatch, request, tmp_path):
 
 
 @pytest.fixture(autouse=True)
+def _novel_chroma_dir(monkeypatch, tmp_path, request):
+    """小说测试使用临时 Chroma 目录。"""
+    if request.node.get_closest_marker("e2e"):
+        yield
+        return
+    chroma_dir = tmp_path / "chroma"
+    monkeypatch.setenv("CHROMA_PERSIST_DIR", str(chroma_dir))
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _disable_rate_limit():
+    """集成测试高频调用 API，关闭 slowapi 限流。"""
+    from app.core.limiter import limiter
+
+    previous = limiter.enabled
+    limiter.enabled = False
+    yield
+    limiter.enabled = previous
+
+
+@pytest.fixture(autouse=True)
 def _reset_provider_cache():
     get_settings.cache_clear()
     clear_provider_cache()
@@ -120,7 +151,11 @@ def _reset_provider_cache():
 
 @pytest.fixture
 def db_engine():
-    engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(bind=engine)
     from app.core.migrate import run_migrations  # noqa: PLC0415
 
@@ -152,6 +187,7 @@ def client(db_engine, monkeypatch):
     monkeypatch.setattr("app.core.database.engine", db_engine)
     monkeypatch.setattr("app.core.database.SessionLocal", session_factory)
     monkeypatch.setattr("app.services.generation_service.SessionLocal", session_factory)
+    monkeypatch.setattr("app.services.novel_generation_service.SessionLocal", session_factory)
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:

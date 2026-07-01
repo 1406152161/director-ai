@@ -7,7 +7,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.asset import Asset
 from app.models.project import Project, Shot
-from app.schemas.project import AssetResponse, ProjectCreate, ProjectListItem, ProjectResponse, ShotResponse
+from app.schemas.project import (
+    AssetResponse,
+    ProjectCreate,
+    ProjectListItem,
+    ProjectResponse,
+    ShotResponse,
+)
+from app.services.progress_hub import emit_progress
 from app.services.script_service import AssetsData, ShotData
 
 
@@ -17,7 +24,7 @@ class ProjectService:
     def __init__(self, db: Session) -> None:
         self._db = db
 
-    def create_project(self, body: ProjectCreate) -> Project:
+    def create_project(self, body: ProjectCreate, owner_id: str | None = None) -> Project:
         project = Project(
             story=body.story,
             style=body.style,
@@ -25,6 +32,7 @@ class ProjectService:
             aspect_ratio=body.aspect_ratio,
             status="pending",
             progress=0,
+            owner_id=owner_id,
         )
         self._db.add(project)
         self._db.commit()
@@ -39,8 +47,11 @@ class ProjectService:
             .first()
         )
 
-    def list_projects(self) -> list[Project]:
-        return self._db.query(Project).order_by(Project.created_at.desc()).all()
+    def list_projects(self, owner_id: str | None = None) -> list[Project]:
+        q = self._db.query(Project).order_by(Project.created_at.desc())
+        if owner_id:
+            q = q.filter(Project.owner_id == owner_id)
+        return q.all()
 
     def update_status(self, project_id: str, status: str, progress: int | None = None) -> None:
         project = self._db.query(Project).filter(Project.id == project_id).first()
@@ -50,6 +61,13 @@ class ProjectService:
         if progress is not None:
             project.progress = progress
         self._db.commit()
+        emit_progress(
+            "project",
+            project_id,
+            status=project.status,
+            progress=project.progress,
+            error=project.error,
+        )
 
     def set_failed(self, project_id: str, error: str) -> None:
         project = self._db.query(Project).filter(Project.id == project_id).first()
@@ -58,6 +76,37 @@ class ProjectService:
         project.status = "failed"
         project.error = error
         self._db.commit()
+        emit_progress(
+            "project",
+            project_id,
+            status="failed",
+            progress=project.progress,
+            error=error,
+        )
+
+    def reset_for_retry(self, project_id: str) -> None:
+        project = self._db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            return
+        project.status = "pending"
+        project.progress = 0
+        project.error = None
+        self._db.commit()
+        emit_progress("project", project_id, status="pending", progress=0, error=None)
+
+    _ACTIVE_STATUSES = frozenset(
+        {"pending", "scripting", "asseting", "imaging", "videoing", "synthesizing"}
+    )
+
+    def delete_project(self, project_id: str) -> bool:
+        project = self.get_project(project_id)
+        if not project:
+            return False
+        if project.status in self._ACTIVE_STATUSES:
+            raise ValueError("进行中的项目不可删除")
+        self._db.delete(project)
+        self._db.commit()
+        return True
 
     def save_script(
         self,
@@ -71,60 +120,67 @@ class ProjectService:
             return
 
         project.title = title
-        self._db.query(Shot).filter(Shot.project_id == project_id).delete()
-        self._db.query(Asset).filter(Asset.project_id == project_id).delete()
+        nested = self._db.begin_nested()
+        try:
+            self._db.query(Shot).filter(Shot.project_id == project_id).delete()
+            self._db.query(Asset).filter(Asset.project_id == project_id).delete()
 
-        if assets:
-            for char in assets.characters:
-                self._db.add(
-                    Asset(
-                        project_id=project_id,
-                        asset_type="character",
-                        asset_key=char.id,
-                        name_cn=char.name_cn,
-                        description_en=char.description_en,
-                        status="pending",
+            if assets:
+                for char in assets.characters:
+                    self._db.add(
+                        Asset(
+                            project_id=project_id,
+                            asset_type="character",
+                            asset_key=char.id,
+                            name_cn=char.name_cn,
+                            description_en=char.description_en,
+                            status="pending",
+                        )
                     )
-                )
-            for scene in assets.scenes:
-                self._db.add(
-                    Asset(
-                        project_id=project_id,
-                        asset_type="scene",
-                        asset_key=scene.id,
-                        name_cn=scene.name_cn,
-                        description_en=scene.description_en,
-                        status="pending",
+                for scene in assets.scenes:
+                    self._db.add(
+                        Asset(
+                            project_id=project_id,
+                            asset_type="scene",
+                            asset_key=scene.id,
+                            name_cn=scene.name_cn,
+                            description_en=scene.description_en,
+                            status="pending",
+                        )
                     )
-                )
-            for prop in assets.props:
-                self._db.add(
-                    Asset(
-                        project_id=project_id,
-                        asset_type="prop",
-                        asset_key=prop.id,
-                        name_cn=prop.name_cn,
-                        description_en=prop.description_en,
-                        status="pending",
+                for prop in assets.props:
+                    self._db.add(
+                        Asset(
+                            project_id=project_id,
+                            asset_type="prop",
+                            asset_key=prop.id,
+                            name_cn=prop.name_cn,
+                            description_en=prop.description_en,
+                            status="pending",
+                        )
                     )
-                )
 
-        for shot_data in shots:
-            shot = Shot(
-                project_id=project_id,
-                index=shot_data.index,
-                scene_cn=shot_data.scene_cn,
-                image_prompt_en=shot_data.image_prompt_en,
-                motion_prompt_en=shot_data.motion_prompt_en,
-                narration_cn=shot_data.narration_cn,
-                duration=shot_data.duration,
-                character_ids=json.dumps(shot_data.character_ids, ensure_ascii=False),
-                scene_id=shot_data.scene_id,
-                prop_ids=json.dumps(shot_data.prop_ids, ensure_ascii=False),
-                status="pending",
-                clip_status="pending",
-            )
-            self._db.add(shot)
+            for shot_data in shots:
+                shot = Shot(
+                    project_id=project_id,
+                    index=shot_data.index,
+                    scene_cn=shot_data.scene_cn,
+                    image_prompt_en=shot_data.image_prompt_en,
+                    motion_prompt_en=shot_data.motion_prompt_en,
+                    narration_cn=shot_data.narration_cn,
+                    duration=shot_data.duration,
+                    character_ids=json.dumps(shot_data.character_ids, ensure_ascii=False),
+                    scene_id=shot_data.scene_id,
+                    prop_ids=json.dumps(shot_data.prop_ids, ensure_ascii=False),
+                    status="pending",
+                    clip_status="pending",
+                )
+                self._db.add(shot)
+
+            nested.commit()
+        except Exception:
+            nested.rollback()
+            raise
 
         self._db.commit()
 
@@ -217,6 +273,7 @@ class ProjectService:
         project.progress = 100
         project.output_url = output_url
         self._db.commit()
+        emit_progress("project", project_id, status="completed", progress=100, error=None)
 
     @staticmethod
     def to_response(project: Project) -> ProjectResponse:

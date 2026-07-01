@@ -1,17 +1,17 @@
 # director-ai
 
-AI 导演平台 — 从灵感到成片的工业化创作工作流（Script → Asset → Keyframe → Video），由 Cursor 辅助生成与迭代。
+AI 导演平台 — 从灵感到成片的工业化创作工作流（Script → Asset → Keyframe → Video），含**短视频**、**长篇小说**与**图文预览**三线。
 
 [![CI](https://github.com/1406152161/director-ai/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/1406152161/director-ai/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## 功能阶段（规划）
+## 功能概览
 
-| 阶段 | 说明 |
-|------|------|
-| 剧本 | 创意输入 → 故事 → 分镜脚本 |
-| 资产 | 角色 / 场景 / 道具一致性管理 |
-| 镜头 | 关键帧生成、九宫格分镜、视频合成 |
+| 产品线 | 说明 |
+|--------|------|
+| 视频 | 创意 → 分镜 → 资产 → 图生图 → 视频合成（M3 连贯模式） |
+| 小说 | 分层规划（千章级）→ 确认大纲 → 按章写作 → 校验 → 向量记忆续写 |
+| 图文 | 多平台图文预览占位（完整生成 Pipeline 待接入） |
 
 ## 分支说明
 
@@ -19,62 +19,82 @@ AI 导演平台 — 从灵感到成片的工业化创作工作流（Script → A
 |------|------|
 | `main` | 稳定发布 |
 | `dev` | 日常开发（**默认工作分支**） |
-| `feature/*` | 新功能分支，合并到 `dev` |
-| `fix/*` | Bug 修复分支 |
-| `hotfix/*` | 生产紧急修复，合并到 `main` |
+| `feature/*` | 新功能，合并到 `dev` |
 
 详细流程见 [docs/branch-strategy.md](docs/branch-strategy.md)。
 
 ## 快速开始
 
+### 环境要求
+
+| 依赖 | 版本/说明 |
+|------|-----------|
+| Python | ≥ 3.11 |
+| Node.js | 建议 18+（用于前端） |
+| FFmpeg | 视频合成**必需**（本地 mock 视频可跑通流程，合成阶段需 FFmpeg） |
+
+### 安装与启动
+
 ```bash
-# 克隆仓库
 git clone https://github.com/1406152161/director-ai.git
 cd director-ai
-
-# 切换到 dev 分支
 git checkout dev
 
-# 复制环境变量模板（后端就绪后使用）
+# 后端 — 复制模板，勿提交真实 .env
+cd backend
 cp .env.example .env
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 
-# 创建功能分支开始开发
-git checkout -b feature/your-feature-name
+# 新终端 — 前端
+cd frontend
+npm install
+npm run dev
 ```
+
+浏览器打开 http://localhost:5173 。
+
+- 默认 Provider 为 **`mock`**，无需 API Key 即可跑通主流程。
+- 真实 Key（Agnes、DeepSeek 等）**仅填写在本地 `backend/.env`**，切勿提交仓库。见 [SECURITY.md](SECURITY.md)。
+
+### 可选：Celery + Redis（生产或与线上一致）
+
+```bash
+# backend/.env 中 USE_CELERY=true，并启动 Redis 后：
+celery -A app.tasks.celery_app worker --loglevel=info --pool=solo
+```
+
+## 文档索引
+
+| 文档 | 适合谁 | 内容 |
+|------|--------|------|
+| **[docs/user-guide.md](docs/user-guide.md)** | 使用者 | 三产品线操作、鉴权、FAQ |
+| **[docs/deployment.md](docs/deployment.md)** | 运维 | 环境变量、生产部署、Celery/SSE/鉴权 |
+| **[docs/codebase.md](docs/codebase.md)** | 开发者 | 目录结构、模块职责、入口对照 |
+| [docs/architecture.md](docs/architecture.md) | 架构 | 分层、Pipeline、路线图 |
+| [docs/execution-plan.md](docs/execution-plan.md) | 协作 | 迭代任务与进度 |
+| [CHANGELOG.md](CHANGELOG.md) | 所有人 | 版本变更 |
+
+交互式 API 文档：后端启动后访问 http://localhost:8000/docs 。
 
 ## 项目结构
 
 ```
 director-ai/
-├── frontend/          # 导演工作台 UI（React + TypeScript + Vite）
-├── backend/           # API 与 Pipeline 编排
-├── docs/              # 设计文档与 GitHub 设置说明
-├── .cursor/rules/     # Cursor AI 项目规则
-├── .github/           # CI/CD、Issue/PR 模板、Dependabot
-├── CONTRIBUTING.md    # 贡献指南
-├── CHANGELOG.md       # 更新日志
-├── LICENSE            # MIT 开源许可
-└── SECURITY.md        # 安全策略
+├── frontend/          # React + TypeScript + Vite
+├── backend/           # FastAPI + Pipeline + Celery
+├── docs/              # 用户指南、部署、代码说明、设计文档
+├── .cursor/rules/     # Agent 三角色协作约定
+└── .github/           # CI/CD
 ```
 
 ## 协作规范
 
-- 提交信息：遵循 [Conventional Commits](https://www.conventionalcommits.org/)，建议使用中文描述
-- 贡献流程：请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)
-- 行为准则：请参阅 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- GitHub 设置：请参阅 [docs/github-setup.md](docs/github-setup.md)
-
-## 发布
-
-版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。在 `main` 分支打 tag 后，Release 工作流会自动创建 GitHub Release：
-
-```bash
-git tag -a v0.1.0 -m "v0.1.0: 描述"
-git push origin v0.1.0
-```
-
-变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+- 提交信息：Conventional Commits，建议中文描述
+- 贡献流程：[CONTRIBUTING.md](CONTRIBUTING.md)
+- GitHub 设置：[docs/github-setup.md](docs/github-setup.md)
+- 安全与密钥：[SECURITY.md](SECURITY.md)
 
 ## 许可证
 
-本项目采用 [MIT License](LICENSE) 开源。
+[MIT License](LICENSE)

@@ -26,7 +26,7 @@ class AssetService:
         aspect_ratio: str,
         on_done: Callable[[str, str, int, int], Awaitable[None]] | None = None,
     ) -> dict[str, str]:
-        """逐资产文生图，返回 asset_key → image_url 映射。"""
+        """逐资产文生图，单个失败不阻断其余资产。"""
         size = aspect_to_size(aspect_ratio)
         semaphore = asyncio.Semaphore(_MAX_CONCURRENCY)
         results: dict[str, str] = {}
@@ -37,18 +37,28 @@ class AssetService:
         async def _generate_one(item: dict) -> None:
             nonlocal completed
             asset_key = item["asset_key"]
-            prompt = item.get("description_en", "").strip() or item.get("name_cn", "")
-            async with semaphore:
-                result = await self._image.text_to_image(
-                    f"{prompt}, character design sheet, consistent appearance, high detail",
-                    size=size,
+            try:
+                base = item.get("description_en", "").strip() or item.get("name_cn", "")
+                prompt = (
+                    f"{base}, character design reference sheet, front view, "
+                    "consistent appearance across shots, high detail"
                 )
+                async with semaphore:
+                    result = await self._image.text_to_image(prompt, size=size)
                 async with lock:
                     results[asset_key] = result.url
                     completed += 1
                     current = completed
                 if on_done:
                     await on_done(asset_key, result.url, current, total)
+            except Exception as exc:
+                logger.warning(
+                    "Asset 生成失败: key=%s, error=%s",
+                    asset_key,
+                    exc,
+                )
+                async with lock:
+                    completed += 1
 
         await asyncio.gather(*[_generate_one(a) for a in assets])
         return results

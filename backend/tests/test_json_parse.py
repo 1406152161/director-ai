@@ -63,3 +63,20 @@ def test_parse_malformed_json_includes_preview():
     text = '{"title": "坏 JSON", "shots": [}'
     with pytest.raises(ValueError, match="原始文本片段"):
         parse_json_from_llm(text)
+
+
+def test_salvage_truncated_outline():
+    text = (
+        '{"outline": ['
+        '{"index": 1, "title": "开篇", "summary": "主角登场", "hook": "悬念"},'
+        '{"index": 2, "title": "冲突", "summary": "遭遇危机", "hook": "未完成的'
+    )
+    result = parse_json_from_llm(text)
+    assert len(result["outline"]) >= 1
+    assert result["outline"][0]["index"] == 1
+
+
+def test_normalize_smart_quotes():
+    text = '{"title": "测试\u201c标题\u201d", "shots": []}'
+    result = parse_json_from_llm(text)
+    assert "标题" in result["title"]

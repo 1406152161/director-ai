@@ -1,5 +1,9 @@
 # @author zhangzhihao
-"""LangGraph 视频生成工作流。"""
+"""LangGraph 视频生成工作流。
+
+.. deprecated::
+    生产路径使用 ``generation_service.py``（M2/M3）。本模块为 M1 占位，未被 import。
+"""
 
 from typing import TypedDict
 
