@@ -6,7 +6,11 @@ from typing import Any
 from app.novel.prompts import EXTRACT_MARKER, build_extract_system_prompt
 from app.providers.base import Message
 from app.providers.registry import get_novel_llm_provider
-from app.services.novel_memory_service import merge_bible_updates, parse_bible, update_foreshadowing_after_chapter
+from app.services.novel_memory_service import (
+    merge_bible_updates,
+    parse_bible,
+    update_foreshadowing_after_chapter,
+)
 from app.utils.json_parse import parse_json_from_llm
 
 

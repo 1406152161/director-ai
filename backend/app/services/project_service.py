@@ -7,7 +7,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.asset import Asset
 from app.models.project import Project, Shot
-from app.schemas.project import AssetResponse, ProjectCreate, ProjectListItem, ProjectResponse, ShotResponse
+from app.schemas.project import (
+    AssetResponse,
+    ProjectCreate,
+    ProjectListItem,
+    ProjectResponse,
+    ShotResponse,
+)
 from app.services.progress_hub import emit_progress
 from app.services.script_service import AssetsData, ShotData
 
@@ -55,7 +61,13 @@ class ProjectService:
         if progress is not None:
             project.progress = progress
         self._db.commit()
-        emit_progress("project", project_id, status=project.status, progress=project.progress, error=project.error)
+        emit_progress(
+            "project",
+            project_id,
+            status=project.status,
+            progress=project.progress,
+            error=project.error,
+        )
 
     def set_failed(self, project_id: str, error: str) -> None:
         project = self._db.query(Project).filter(Project.id == project_id).first()
@@ -64,7 +76,13 @@ class ProjectService:
         project.status = "failed"
         project.error = error
         self._db.commit()
-        emit_progress("project", project_id, status="failed", progress=project.progress, error=error)
+        emit_progress(
+            "project",
+            project_id,
+            status="failed",
+            progress=project.progress,
+            error=error,
+        )
 
     def reset_for_retry(self, project_id: str) -> None:
         project = self._db.query(Project).filter(Project.id == project_id).first()

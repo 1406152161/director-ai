@@ -2,8 +2,11 @@
 """规划 checkpoint 断点续跑测试。"""
 
 import pytest
-
-from app.novel.plan_checkpoint import PlanCheckpointHandlers, can_resume_planning, planning_state_from_meta
+from app.novel.plan_checkpoint import (
+    PlanCheckpointHandlers,
+    can_resume_planning,
+    planning_state_from_meta,
+)
 from app.services.novel_plan_service import NovelPlanService
 
 

@@ -70,5 +70,8 @@ def test_project_scoped_when_auth_enabled(auth_client):
     listed = auth_client.get("/api/projects", headers=headers).json()
     assert any(p["id"] == project_id for p in listed)
 
-    other_list = auth_client.get("/api/projects", headers={"Authorization": f"Bearer {other_token}"}).json()
+    other_list = auth_client.get(
+        "/api/projects",
+        headers={"Authorization": f"Bearer {other_token}"},
+    ).json()
     assert not any(p["id"] == project_id for p in other_list)

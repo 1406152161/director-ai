@@ -4,7 +4,6 @@
 import time
 
 import pytest
-
 from app.core.config import get_settings
 
 
@@ -72,7 +71,12 @@ def test_create_novel_via_celery_eager(client, celery_eager):
 def test_create_project_via_celery_eager(client, celery_eager):
     create_resp = client.post(
         "/api/projects",
-        json={"story": "Celery eager 视频", "style": "vlog", "duration": 15, "aspect_ratio": "9:16"},
+        json={
+            "story": "Celery eager 视频",
+            "style": "vlog",
+            "duration": 15,
+            "aspect_ratio": "9:16",
+        },
     )
     assert create_resp.status_code == 201
     project_id = create_resp.json()["id"]

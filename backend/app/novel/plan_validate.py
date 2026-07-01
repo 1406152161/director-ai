@@ -32,7 +32,8 @@ def validate_total_chapters(total: int, user_target: int | None = None) -> None:
         high = min(ABSOLUTE_MAX_CHAPTERS, user_target + USER_TARGET_FLEX)
         if not (low <= total <= high):
             raise ValueError(
-                f"AI 建议章数 {total} 须在用户目标 {user_target}±{USER_TARGET_FLEX}（{low}–{high}）内"
+                f"AI 建议章数 {total} 须在用户目标 {user_target}±{USER_TARGET_FLEX}"
+                f"（{low}–{high}）内"
             )
 
 
@@ -80,7 +81,8 @@ def validate_outline_batch(
         missing = expected - got
         extra = got - expected
         raise ValueError(
-            f"批次 {chapter_from}–{chapter_to} index 不完整，缺 {sorted(missing)} 多 {sorted(extra - expected)}"
+            f"批次 {chapter_from}–{chapter_to} index 不完整，"
+            f"缺 {sorted(missing)} 多 {sorted(extra - expected)}"
         )
     for item in items:
         idx = item.get("index")

@@ -10,8 +10,8 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.limiter import limiter
 from app.schemas.project import ProjectCreate, ProjectListItem, ProjectResponse
-from app.services.task_dispatch import enqueue_video_generation
 from app.services.project_service import ProjectService
+from app.services.task_dispatch import enqueue_video_generation
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -113,4 +113,6 @@ def _project_progress_snapshot(db: Session, project_id: str) -> tuple[str, int, 
 @router.get("/{project_id}/events")
 async def project_progress_events(project_id: str, db: Session = Depends(get_db)):
     # TODO: auth_enabled 时对 SSE 订阅做 owner 校验
-    return progress_event_response("project", project_id, db, load_snapshot=_project_progress_snapshot)
+    return progress_event_response(
+        "project", project_id, db, load_snapshot=_project_progress_snapshot
+    )

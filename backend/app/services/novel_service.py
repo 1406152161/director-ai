@@ -7,16 +7,16 @@ import logging
 from sqlalchemy import update
 from sqlalchemy.orm import Session, joinedload
 
+from app.models.novel import Novel, NovelChapter
+from app.novel.prompts import VALID_GENRES, genre_label
+from app.schemas.novel import NovelChapterResponse, NovelCreate, NovelListItem, NovelResponse
+from app.services.novel_memory_service import parse_bible
+from app.services.progress_hub import emit_progress
+
 logger = logging.getLogger(__name__)
 
 # 内联大纲/API 响应中 outline 条目上限，超过则标记 outline_truncated
 MAX_OUTLINE_INLINE_ITEMS = 500
-
-from app.models.novel import Novel, NovelChapter
-from app.novel.prompts import VALID_GENRES, genre_label
-from app.schemas.novel import NovelCreate, NovelListItem, NovelResponse, NovelChapterResponse
-from app.services.novel_memory_service import parse_bible
-from app.services.progress_hub import emit_progress
 
 
 class NovelService:

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.core.config import Settings, get_settings
-from app.novel.prompts import VALIDATE_MARKER, build_validate_system_prompt
+from app.novel.prompts import build_validate_system_prompt
 from app.providers.base import Message
 from app.providers.registry import get_novel_llm_provider
 from app.services.novel_memory_service import beats_to_prompt, foreshadowing_to_prompt

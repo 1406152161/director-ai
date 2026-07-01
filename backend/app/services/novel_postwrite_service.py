@@ -114,7 +114,8 @@ class NovelPostwriteService:
         bible["foreshadowing"] = foreshadowing
 
         outline_svc = NovelOutlineService(self._db)
-        use_db = bool(bible.get("meta", {}).get("outline_in_db")) or outline_svc.count_by_level(novel_id) > 0
+        outline_in_db = bool(bible.get("meta", {}).get("outline_in_db"))
+        use_db = outline_in_db or outline_svc.count_by_level(novel_id) > 0
         unwritten = [o for o in merged_outline if int(o.get("index", 0)) > last_written]
         if use_db and unwritten:
             outline_svc.upsert_batch(novel_id, unwritten, detail_level="detailed")

@@ -2,7 +2,6 @@
 """agnes_parse 单元测试。"""
 
 import pytest
-
 from app.providers.video.agnes_parse import extract_completed_video_url
 
 

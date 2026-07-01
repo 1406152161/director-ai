@@ -2,7 +2,6 @@
 """规划 JSON 校验单元测试。"""
 
 import pytest
-
 from app.novel.plan_validate import validate_plan
 
 

@@ -1,8 +1,9 @@
 # @author zhangzhihao
 """规划流水线 checkpoint 回调。"""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass

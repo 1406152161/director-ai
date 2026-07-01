@@ -180,4 +180,7 @@ def parse_json_from_llm(text: str) -> dict:
     value = parse_json_value_from_llm(text)
     if isinstance(value, dict):
         return value
-    raise ValueError(f"期望 JSON 对象，实际为 {type(value).__name__}。原始文本片段: {_preview(text)}")
+    raise ValueError(
+        f"期望 JSON 对象，实际为 {type(value).__name__}。"
+        f"原始文本片段: {_preview(text)}"
+    )

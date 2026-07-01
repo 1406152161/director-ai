@@ -4,7 +4,6 @@
 import time
 
 import pytest
-
 from app.services.novel_plan_service import l2_expand_range
 
 

@@ -16,7 +16,11 @@ logger = logging.getLogger(__name__)
 class _FallbackEmbeddingFunction(EmbeddingFunction[Documents]):
     """主 Provider 失败时自动降级为 LocalHash。"""
 
-    def __init__(self, primary: EmbeddingFunction[Documents], fallback_name: str = "local_hash") -> None:
+    def __init__(
+        self,
+        primary: EmbeddingFunction[Documents],
+        fallback_name: str = "local_hash",
+    ) -> None:
         self._primary = primary
         self._fallback = LocalHashEmbeddingFunction()
         self._fallback_name = fallback_name

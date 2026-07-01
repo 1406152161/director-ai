@@ -86,7 +86,8 @@ def bible_to_prompt_summary(bible: dict[str, Any]) -> str:
     if chars:
         char_lines = []
         for c in chars:
-            line = f"- {c.get('name', '?')}（{c.get('role', '')}）：{c.get('traits') or c.get('profile', '')}"
+            traits = c.get("traits") or c.get("profile", "")
+            line = f"- {c.get('name', '?')}（{c.get('role', '')}）：{traits}"
             if c.get("growth_arc"):
                 line += f"｜成长线：{c['growth_arc']}"
             char_lines.append(line)
@@ -168,7 +169,9 @@ def get_beats_for_chapter(bible: dict[str, Any], chapter_index: int) -> list[dic
     return beats_map.get(str(chapter_index)) or beats_map.get(chapter_index) or []
 
 
-def save_beats_for_chapter(bible: dict[str, Any], chapter_index: int, beats: list[dict[str, Any]]) -> dict[str, Any]:
+def save_beats_for_chapter(
+    bible: dict[str, Any], chapter_index: int, beats: list[dict[str, Any]]
+) -> dict[str, Any]:
     """缓存章 beat 到 bible。"""
     beats_map = dict(bible.get("beats") or {})
     beats_map[str(chapter_index)] = beats

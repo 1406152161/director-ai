@@ -1,9 +1,8 @@
 # @author zhangzhihao
 """DeepSeek / Zhipu Provider 请求体 mock 测试。"""
 
-import pytest
 import httpx
-
+import pytest
 from app.core.config import Settings
 from app.providers.base import Message
 from app.providers.llm.deepseek import DeepSeekLLMProvider

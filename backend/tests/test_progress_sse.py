@@ -4,7 +4,6 @@
 import json
 
 import pytest
-
 from app.services.progress_hub import ProgressHub, progress_snapshot
 
 

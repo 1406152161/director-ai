@@ -4,9 +4,12 @@
 import json
 import logging
 
-from app.core.config import get_settings
 from app.core.database import SessionLocal
-from app.novel.plan_checkpoint import PlanCheckpointHandlers, can_resume_planning, planning_state_from_meta
+from app.novel.plan_checkpoint import (
+    PlanCheckpointHandlers,
+    can_resume_planning,
+    planning_state_from_meta,
+)
 from app.novel.plan_constants import L2_BATCH_SIZE, L2_INITIAL_WINDOW
 from app.novel.plan_validate import validate_plan
 from app.services.novel_beat_service import NovelBeatService
@@ -382,14 +385,18 @@ async def run_novel_generation(novel_id: str) -> None:
             initial_skeleton = outline_svc.to_bible_outline(novel_id, 1, l1_done)
         else:
             initial_skeleton = []
-        world_plan = novel_svc.world_plan_from_bible(novel) if resume and bible.get("world") else None
+        world_plan = (
+            novel_svc.world_plan_from_bible(novel) if resume and bible.get("world") else None
+        )
 
         def on_l0_complete(wp: dict) -> None:
             novel_svc.apply_l0_plan(novel_id, wp, target_chapters)
 
         def on_l1_batch(batch: list, done_through: int) -> None:
             outline_svc.upsert_batch(novel_id, batch, detail_level="skeleton", locked=True)
-            total = int(parse_bible(novel_svc.get_novel(novel_id).bible_json).get("meta", {}).get("total_chapters") or 1)
+            novel_row = novel_svc.get_novel(novel_id)
+            meta = parse_bible(novel_row.bible_json).get("meta", {})
+            total = int(meta.get("total_chapters") or 1)
             progress = min(85, 10 + int(75 * done_through / total))
             novel_svc.update_planning_state(
                 novel_id,

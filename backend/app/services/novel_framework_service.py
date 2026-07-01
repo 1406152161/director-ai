@@ -1,7 +1,6 @@
 # @author zhangzhihao
 """框架记忆条目：DB SSOT + Chroma 索引 + hybrid 检索。"""
 
-import json
 import logging
 from typing import Any
 

@@ -2,8 +2,7 @@
 """章节质量校验单元测试。"""
 
 import pytest
-
-from app.services.novel_validate_service import NovelValidateService, PASS_SCORE
+from app.services.novel_validate_service import PASS_SCORE, NovelValidateService
 
 
 @pytest.mark.asyncio

@@ -7,7 +7,8 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
-from typing import Any, AsyncIterator, Literal
+from collections.abc import AsyncIterator
+from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,9 @@ class ProgressHub:
     """按资源维度 fan-out；Redis 广播供 Celery Worker → API SSE。"""
 
     def __init__(self) -> None:
-        self._queues: dict[tuple[ResourceKind, str], list[asyncio.Queue[dict[str, Any]]]] = defaultdict(list)
+        self._queues: dict[
+            tuple[ResourceKind, str], list[asyncio.Queue[dict[str, Any]]]
+        ] = defaultdict(list)
         self._lock = asyncio.Lock()
         self._redis = None
         self._redis_enabled = False
@@ -127,7 +130,9 @@ class ProgressHub:
         except Exception as exc:
             logger.debug("ProgressHub Redis listener 结束: %s", exc)
 
-    async def subscribe(self, kind: ResourceKind, resource_id: str) -> AsyncIterator[dict[str, Any]]:
+    async def subscribe(
+        self, kind: ResourceKind, resource_id: str
+    ) -> AsyncIterator[dict[str, Any]]:
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=64)
         key = (kind, resource_id)
         stop = asyncio.Event()
@@ -143,7 +148,7 @@ class ProgressHub:
             while True:
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=25.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield {"type": "heartbeat"}
                     continue
                 yield event

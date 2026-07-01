@@ -9,14 +9,14 @@ import httpx
 from app.core.config import Settings, get_settings
 from app.core.constants import aspect_to_video_size, duration_to_num_frames
 from app.providers.base import VideoResult
-from app.providers.video.agnes_parse import extract_completed_video_url
-from app.utils.media_input import normalize_video_image_input
 from app.providers.exceptions import (
     ProviderAuthError,
     ProviderBadRequestError,
     ProviderError,
     ProviderTimeoutError,
 )
+from app.providers.video.agnes_parse import extract_completed_video_url
+from app.utils.media_input import normalize_video_image_input
 
 logger = logging.getLogger(__name__)
 

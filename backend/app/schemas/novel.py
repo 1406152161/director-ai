@@ -2,6 +2,7 @@
 """小说相关 Pydantic 模型。"""
 
 from datetime import datetime
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -9,7 +10,10 @@ class NovelCreate(BaseModel):
     premise: str = Field(..., min_length=1, max_length=500, description="一句话创意")
     genre: str = Field(..., description="题材 key：xuanhuan/dushi/xuanyi/tianai/kehuan")
     target_chapters: int | None = Field(
-        default=None, ge=8, le=10000, description="目标章数，留空由 AI 建议；AI 可在目标±200 内定最终章数"
+        default=None,
+        ge=8,
+        le=10000,
+        description="目标章数，留空由 AI 建议；AI 可在目标±200 内定最终章数",
     )
 
     @field_validator("target_chapters", mode="before")

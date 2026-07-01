@@ -4,7 +4,6 @@
 import base64
 
 import pytest
-
 from app.utils.media_input import (
     normalize_video_image_input,
     path_to_base64,

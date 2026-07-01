@@ -2,7 +2,6 @@
 """框架记忆 hybrid 检索单元测试。"""
 
 import pytest
-
 from app.services.novel_framework_service import NovelFrameworkService
 from app.services.novel_memory_service import parse_bible
 

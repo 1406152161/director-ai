@@ -86,7 +86,9 @@ class NovelOutlineService:
         self._db.query(NovelOutlineItem).filter(NovelOutlineItem.novel_id == novel_id).delete()
         self._db.commit()
 
-    def anchor_items(self, novel_id: str, before_index: int, count: int = 3) -> list[dict[str, Any]]:
+    def anchor_items(
+        self, novel_id: str, before_index: int, count: int = 3
+    ) -> list[dict[str, Any]]:
         """衔接锚点：before_index 之前的若干章。"""
         start = max(1, before_index - count)
         rows = self.list_range(novel_id, start, before_index - 1)
@@ -107,7 +109,9 @@ class NovelOutlineService:
         rows = self.list_range(novel_id, chapter_from, chapter_to)
         return [self._to_dict(r) for r in rows]
 
-    def merge_into_bible(self, bible: dict[str, Any], novel_id: str, max_items: int = 500) -> dict[str, Any]:
+    def merge_into_bible(
+        self, bible: dict[str, Any], novel_id: str, max_items: int = 500
+    ) -> dict[str, Any]:
         """将 DB outline 合并进 bible 供前端/API（默认最多 500 条）。"""
         rows = self.list_range(novel_id, 1, max_items)
         bible = dict(bible)

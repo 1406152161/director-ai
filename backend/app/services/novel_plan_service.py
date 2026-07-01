@@ -10,8 +10,8 @@ from app.novel.plan_checkpoint import PlanCheckpointHandlers
 from app.novel.plan_constants import (
     L1_BATCH_SIZE,
     L2_BATCH_SIZE,
-    L2_INITIAL_WINDOW,
     L2_EXPAND_AHEAD,
+    L2_INITIAL_WINDOW,
     USER_TARGET_FLEX,
 )
 from app.novel.plan_validate import (
@@ -198,7 +198,8 @@ class NovelPlanService:
             user = (
                 f"题材：{genre_label(genre)}\n"
                 f"用户创意：{premise}\n"
-                f"全书共 {total} 章。本次仅输出第 {chapter_from}–{chapter_to} 章 **骨架** outline。\n"
+                f"全书共 {total} 章。本次仅输出第 {chapter_from}–{chapter_to} 章"
+                f" **骨架** outline。\n"
                 f"世界观与卷弧：\n{json.dumps(world_summary, ensure_ascii=False)}\n"
                 f"弧段契约：\n{json.dumps(arc_contract, ensure_ascii=False)}\n"
                 f"衔接锚点（前序章节，须连贯）：\n{json.dumps(anchors, ensure_ascii=False)}\n"
