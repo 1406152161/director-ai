@@ -109,6 +109,17 @@ Windows 开发建议使用 `--pool=solo`；Linux 生产可用默认 prefork。
 
 本地/测试默认 `USE_CELERY=false`；生产需 Redis 以支持 **Celery Worker → API SSE** 跨进程进度（`ProgressHub` Redis pub/sub）。
 
+### 主要 REST 端点（摘要）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/articles` | 创建图文预览 |
+| `DELETE` | `/api/projects/{id}` | 删除视频（进行中不可删） |
+| `DELETE` | `/api/novels/{id}` | 删除小说 |
+| `DELETE` | `/api/articles/{id}` | 删除图文 |
+
+完整列表见 http://localhost:8000/docs 。
+
 ### 实时进度（SSE）
 
 视频进度页与小说工作台通过 Server-Sent Events 订阅状态，无需 2s 轮询：
@@ -161,8 +172,60 @@ curl http://localhost:8000/api/health
 curl "http://localhost:8000/api/health?deep=1"   # DB + Redis 探针
 ```
 
+## FFmpeg（视频线必需）
+
+视频合成依赖系统已安装的 FFmpeg：
+
+| 平台 | 安装示例 |
+|------|----------|
+| Windows | `winget install ffmpeg` |
+| macOS | `brew install ffmpeg` |
+| Linux | `apt install ffmpeg` 或发行版等价包 |
+
+未安装时创建视频项目可能在合成阶段失败。开发环境可先使用 `mock` Provider 验证流程。
+
+## 前端生产构建
+
+```bash
+cd frontend
+cp .env.example .env
+# 前后端不同域时设置：VITE_API_BASE=https://api.your-domain.com
+npm install
+npm run build
+# 静态文件在 frontend/dist/，由 Nginx 等托管
+```
+
+同域部署时 `VITE_API_BASE` 可留空，由 Nginx 将 `/api`、`/outputs` 反代到后端。
+
+### Nginx 反代示例（片段）
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:8000/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_buffering off;   # SSE 需要
+}
+location /outputs/ {
+    proxy_pass http://127.0.0.1:8000/outputs/;
+}
+location / {
+    root /path/to/frontend/dist;
+    try_files $uri /index.html;
+}
+```
+
+## 密钥与安全
+
+- **禁止**将 `backend/.env`、`frontend/.env` 提交到 Git。
+- 文档与 `.env.example` 中仅使用占位符（如 `your_agnes_api_key`、留空的 `DEEPSEEK_API_KEY=`）。
+- 生产环境 `JWT_SECRET` 须使用足够长度的随机字符串。
+- 详见 [SECURITY.md](../SECURITY.md)。
+
 ## 相关文档
 
+- [user-guide.md](./user-guide.md) — 使用说明
+- [codebase.md](./codebase.md) — 代码结构
 - [execution-plan.md](./execution-plan.md) — 迭代任务
 - [backlog-quality.md](./backlog-quality.md) — 质量债
 - [architecture.md](./architecture.md) — 架构目标态

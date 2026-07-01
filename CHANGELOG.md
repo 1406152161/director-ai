@@ -42,7 +42,11 @@
 - Pipeline 状态流转：`scripting → asseting → imaging → videoing → synthesizing`
 - `coherent_mode=false` 时完整回退 M2 并行视频 + concat demuxer 硬拼接
 
-### 待办
+### 新增（文档）
+
+- **docs/user-guide.md**：三产品线使用说明、鉴权、FAQ
+- **docs/codebase.md**：后端/前端模块地图与入口对照
+- README / deployment 补全 FFmpeg、生产构建、Nginx 示例与密钥安全说明
 
 - 视频线质量债见 `docs/backlog-quality.md`
 - 添加 commitlint + husky（代码起步后启用）
