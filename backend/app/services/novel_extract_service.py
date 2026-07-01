@@ -1,6 +1,7 @@
 # @author zhangzhihao
 """写后结构化抽取。"""
 
+import json
 from typing import Any
 
 from app.novel.prompts import EXTRACT_MARKER, build_extract_system_prompt
@@ -12,6 +13,16 @@ from app.services.novel_memory_service import (
     update_foreshadowing_after_chapter,
 )
 from app.utils.json_parse import parse_json_from_llm
+
+
+def _bible_context_for_extract(bible_json: str) -> str:
+    """核心设定完整保留，大纲仅取前 50 章摘要。"""
+    bible = parse_bible(bible_json)
+    outline = bible.get("outline") or []
+    outline_summary = json.dumps(outline[:50], ensure_ascii=False)[:3000]
+    core = {k: v for k, v in bible.items() if k != "outline"}
+    bible_context = json.dumps(core, ensure_ascii=False)
+    return f"{bible_context}\n\n大纲摘要（前50章）：\n{outline_summary}"
 
 
 class NovelExtractService:
@@ -30,10 +41,11 @@ class NovelExtractService:
     ) -> tuple[dict[str, Any], list[dict], list[dict], list[str]]:
         """返回 (merged_bible, entity_updates, fs_updates, new_facts)。"""
         system = build_extract_system_prompt()
+        bible_context = _bible_context_for_extract(bible_json)
         user = (
             f"第{chapter_index}章《{title}》\n"
             f"摘要：{summary}\n\n正文：\n{content[:5000]}\n\n"
-            f"当前 Bible：\n{bible_json[:3000]}\n"
+            f"当前 Bible：\n{bible_context}\n"
         )
         raw = await self._llm.chat(
             [Message("system", system), Message("user", user)],

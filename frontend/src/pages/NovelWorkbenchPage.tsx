@@ -25,13 +25,26 @@ function NovelWorkbenchPage() {
   }
 
   if (wb.isError || !wb.novel) {
+    const errMsg = wb.error ? (wb.error as Error).message : '';
+    const is404 = errMsg.includes('404') || errMsg.includes('不存在');
+    if (is404) {
+      return (
+        <section className="page novel-workbench page-error">
+          <h2>作品不存在</h2>
+          <p>该作品可能已被删除</p>
+          <div className="progress-actions">
+            <Link to="/library?tab=novel" className="btn-primary">
+              返回作品库
+            </Link>
+          </div>
+        </section>
+      );
+    }
     return (
-      <section className="page novel-workbench">
-        <h1>小说工作台</h1>
+      <section className="page novel-workbench page-error">
+        <h2>加载失败</h2>
         <p className="error-text" role="alert">
-          {wb.error
-            ? `加载失败：${(wb.error as Error).message}`
-            : '小说不存在或已被删除'}
+          {errMsg || '小说不存在或已被删除'}
         </p>
         <div className="progress-actions">
           <Link to="/library?tab=novel" className="btn-secondary">

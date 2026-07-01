@@ -94,7 +94,9 @@ class ProjectService:
         self._db.commit()
         emit_progress("project", project_id, status="pending", progress=0, error=None)
 
-    _ACTIVE_STATUSES = frozenset({"pending", "script", "images", "videos", "composing"})
+    _ACTIVE_STATUSES = frozenset(
+        {"pending", "scripting", "asseting", "imaging", "videoing", "synthesizing"}
+    )
 
     def delete_project(self, project_id: str) -> bool:
         project = self.get_project(project_id)
@@ -118,9 +120,8 @@ class ProjectService:
             return
 
         project.title = title
-        # SAVEPOINT：删除后插入失败时回滚，避免分镜/资产半丢失
+        nested = self._db.begin_nested()
         try:
-            self._db.begin_nested()
             self._db.query(Shot).filter(Shot.project_id == project_id).delete()
             self._db.query(Asset).filter(Asset.project_id == project_id).delete()
 
@@ -176,10 +177,12 @@ class ProjectService:
                 )
                 self._db.add(shot)
 
-            self._db.commit()
+            nested.commit()
         except Exception:
-            self._db.rollback()
+            nested.rollback()
             raise
+
+        self._db.commit()
 
     async def update_asseting_progress(self, project_id: str, completed: int, total: int) -> None:
         """资产生成进度：20% 起，占 10% 区间。"""

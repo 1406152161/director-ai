@@ -2,14 +2,14 @@
  * @author zhangzhihao
  */
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { fetchNovelOutline } from '../../api/client';
 import {
   parseNovelBible,
   type NovelBibleOutlineItem,
   type NovelBibleVolume,
 } from '../../utils/novelBible';
-import { NOVEL_STATUS_LABEL } from '../../utils/novelLabels';
+import { chapterStatusLabel } from '../../utils/novelLabels';
 
 export const OUTLINE_PAGE_SIZE = 50;
 
@@ -56,7 +56,7 @@ export interface OutlinePanelProps {
   readOnly: boolean;
 }
 
-export function OutlinePanel({
+export const OutlinePanel = memo(function OutlinePanel({
   novelId,
   bible,
   chapterStatusByIndex,
@@ -137,7 +137,7 @@ export function OutlinePanel({
               )}
             </span>
             <span className="outline-item-status">
-              {chStatus ? (NOVEL_STATUS_LABEL[chStatus] ?? chStatus) : '未写'}
+              {chStatus ? chapterStatusLabel(chStatus) : '未写'}
             </span>
           </button>
         </div>
@@ -273,4 +273,4 @@ export function OutlinePanel({
       </section>
     </div>
   );
-}
+});

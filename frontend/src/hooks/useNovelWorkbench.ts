@@ -2,7 +2,7 @@
  * @author zhangzhihao
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   approveNovelChapter,
   chatNovel,
@@ -28,6 +28,7 @@ import {
   type NovelBibleVolume,
 } from '../utils/novelBible';
 import { isTerminalProgressStatus, useProgressEvents } from './useProgressEvents';
+import { isTerminalStatus } from '../utils/workStatus';
 import { useToastStore } from '../store/useToastStore';
 
 export function useNovelWorkbench(novelId: string | undefined) {
@@ -45,6 +46,7 @@ export function useNovelWorkbench(novelId: string | undefined) {
   const [worldSaveVersion, setWorldSaveVersion] = useState(0);
   const [sseConnected, setSseConnected] = useState(false);
   const [chapterSidebarOpen, setChapterSidebarOpen] = useState(false);
+  const initialSelectedRef = useRef(false);
   const showToast = useToastStore((s) => s.showToast);
 
   const onMutationError = useCallback(
@@ -58,8 +60,10 @@ export function useNovelWorkbench(novelId: string | undefined) {
     enabled: !!novelId,
     refetchInterval: (query) => {
       if (sseConnected) return false;
+      if (query.state.status === 'error') return 10000;
       const status = query.state.data?.status;
-      return status && !['completed', 'failed', 'planned'].includes(status) ? 2000 : false;
+      if (status && isTerminalStatus(status)) return false;
+      return 3000;
     },
   });
 
@@ -85,12 +89,15 @@ export function useNovelWorkbench(novelId: string | undefined) {
   const needsReview = novel?.status === 'review_required';
 
   useEffect(() => {
-    if (!novel?.chapters?.length) return;
-    const completed = novel.chapters.filter((c) => c.status === 'completed');
-    if (completed.length > 0) {
-      setSelectedIndex(completed[completed.length - 1].index);
+    if (initialSelectedRef.current || !novel?.chapters?.length) return;
+    const lastCompleted = [...novel.chapters]
+      .filter((c) => c.status === 'completed')
+      .sort((a, b) => b.index - a.index)[0];
+    if (lastCompleted) {
+      setSelectedIndex(lastCompleted.index);
+      initialSelectedRef.current = true;
     }
-  }, [novel?.chapters, novel?.status]);
+  }, [novel?.chapters]);
 
   useEffect(() => {
     if (isPlanned) {

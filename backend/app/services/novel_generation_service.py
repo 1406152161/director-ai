@@ -33,6 +33,19 @@ from app.services.novel_write_service import NovelWriteService
 logger = logging.getLogger(__name__)
 
 
+def _safe_set_failed(novel_svc: NovelService, novel_id: str, exc: Exception) -> None:
+    """写作失败时更新状态；若 DB 不可用则记录 critical 日志。"""
+    try:
+        novel_svc.set_failed(novel_id, str(exc))
+    except Exception as inner_exc:
+        logger.critical(
+            "小说 %s 写作失败且无法更新状态: %s / %s",
+            novel_id,
+            exc,
+            inner_exc,
+        )
+
+
 def _outline_entry(bible: dict, index: int) -> dict | None:
     for item in bible.get("outline") or []:
         if item.get("index") == index:
@@ -499,7 +512,7 @@ async def run_novel_start_writing(novel_id: str, write_count: int = 3) -> None:
                 novel_svc.finalize_after_writing_batch(novel_id)
         except Exception as exc:
             logger.exception("开始写作失败: %s", novel_id)
-            novel_svc.set_failed(novel_id, str(exc))
+            _safe_set_failed(novel_svc, novel_id, exc)
     finally:
         db.close()
 
@@ -558,7 +571,7 @@ async def run_novel_next_chapter(novel_id: str, write_count: int = 1) -> None:
                 return
         except Exception as exc:
             logger.exception("续写失败: %s", novel_id)
-            novel_svc.set_failed(novel_id, str(exc))
+            _safe_set_failed(novel_svc, novel_id, exc)
     finally:
         db.close()
 
@@ -709,8 +722,6 @@ async def run_rewrite_chapter(novel_id: str, chapter_index: int) -> None:
                     novel_id, chapter_index, title, content, summary
                 )
                 novel_svc.clear_review_block_if_none(novel_id)
-                if not novel_svc.has_blocking_review(novel_id):
-                    novel_svc.finalize_after_writing_batch(novel_id)
             else:
                 novel_svc.save_chapter(
                     chapter.id,
@@ -726,7 +737,7 @@ async def run_rewrite_chapter(novel_id: str, chapter_index: int) -> None:
                 novel_svc.set_review_required(novel_id, novel.progress)
         except Exception as exc:
             logger.exception("重写章节失败: %s 第%s章", novel_id, chapter_index)
-            novel_svc.set_failed(novel_id, str(exc))
+            _safe_set_failed(novel_svc, novel_id, exc)
     finally:
         db.close()
 

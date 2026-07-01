@@ -80,7 +80,7 @@ class ProgressHub:
             try:
                 queue.put_nowait(payload)
             except asyncio.QueueFull:
-                pass
+                logger.warning("SSE 队列已满，丢弃事件: %s:%s", kind, resource_id)
 
         if self._redis_enabled and self._redis:
             envelope = json.dumps(

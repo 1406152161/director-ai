@@ -8,7 +8,7 @@ import type {
   NovelBibleOutlineItem,
   NovelBibleVolume,
 } from '../utils/novelBible';
-import { getStoredToken } from '../store/useAuthStore';
+import { getStoredToken, useAuthStore } from '../store/useAuthStore';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
@@ -91,6 +91,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers,
   });
+  if (response.status === 401) {
+    useAuthStore.getState().clearSession();
+    if (!window.location.pathname.startsWith('/login')) {
+      const redirect = encodeURIComponent(window.location.pathname);
+      window.location.href = `/login?redirect=${redirect}`;
+    }
+  }
   if (!response.ok) {
     let message = `请求失败 (${response.status})`;
     try {

@@ -448,11 +448,11 @@ class NovelService:
         return self.sync_bible_indexes(novel_id, bible)
 
     def clear_review_block_if_none(self, novel_id: str) -> None:
-        """无待复核章节时，从 review_required 恢复为可续写状态（非全书完结时不应 progress=100）。"""
+        """无待复核章节时，从 review_required / writing 恢复为可续写状态。"""
         if self.has_blocking_review(novel_id):
             return
         novel = self._db.query(Novel).filter(Novel.id == novel_id).first()
-        if novel and novel.status == "review_required":
+        if novel and novel.status in ("review_required", "writing"):
             self.finalize_after_writing_batch(novel_id)
 
     def get_chapter(self, novel_id: str, index: int) -> NovelChapter | None:

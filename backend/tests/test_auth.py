@@ -45,6 +45,38 @@ def test_register_and_login(auth_client):
     assert login.json()["access_token"]
 
 
+def test_register_short_password_rejected(auth_client):
+    resp = auth_client.post(
+        "/api/auth/register",
+        json={"email": "short@example.com", "password": "1234567"},
+    )
+    assert resp.status_code == 422
+
+
+def test_login_rate_limit(auth_client):
+    from app.core.limiter import limiter
+
+    limiter.enabled = True
+    try:
+        auth_client.post(
+            "/api/auth/register",
+            json={"email": "rate@example.com", "password": "secret123"},
+        )
+        for _ in range(10):
+            resp = auth_client.post(
+                "/api/auth/login",
+                json={"email": "rate@example.com", "password": "wrong-password"},
+            )
+            assert resp.status_code in (401, 429)
+        resp = auth_client.post(
+            "/api/auth/login",
+            json={"email": "rate@example.com", "password": "wrong-password"},
+        )
+        assert resp.status_code == 429
+    finally:
+        limiter.enabled = False
+
+
 def test_project_scoped_when_auth_enabled(auth_client):
     reg = auth_client.post(
         "/api/auth/register",

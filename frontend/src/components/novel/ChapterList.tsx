@@ -4,7 +4,7 @@
 import { memo } from 'react';
 import type { NovelChapterResponse } from '../../api/client';
 import type { NovelBible } from '../../utils/novelBible';
-import { NOVEL_STATUS_LABEL } from '../../utils/novelLabels';
+import { chapterStatusLabel } from '../../utils/novelLabels';
 
 export type MainTab = 'read' | 'world' | 'outline';
 export type LeftPanelMode = 'chapters' | 'plan';
@@ -79,7 +79,7 @@ export const ChapterList = memo(function ChapterList({
                 第{ch.index}章 {ch.title}
               </span>
               <span className={`chapter-status status-${ch.status}`}>
-                {NOVEL_STATUS_LABEL[ch.status] ?? ch.status}
+                {chapterStatusLabel(ch.status)}
               </span>
             </button>
           </li>

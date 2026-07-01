@@ -30,6 +30,20 @@ class FFmpegService:
             )
         return ffmpeg
 
+    @staticmethod
+    def _run_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            logger.error(
+                "FFmpeg 失败: cmd=%s, stderr=%s",
+                cmd,
+                (result.stderr or "")[:500],
+            )
+            raise subprocess.CalledProcessError(
+                result.returncode, cmd, result.stdout, result.stderr
+            )
+        return result
+
     def probe_duration(self, media_path: Path, fallback: float = 0.0) -> float:
         """用 ffprobe 探测媒体时长（秒），失败时回退 fallback。"""
         ffprobe = shutil.which("ffprobe")
@@ -105,13 +119,12 @@ class FFmpegService:
         ]
 
         font = self._font_path()
-        srt_escaped = _escape_subtitles_path(srt_path)
+        srt_escaped = _escape_ffmpeg_path(srt_path)
         if font:
-            font_escaped = _escape_subtitles_path(Path(font))
             subtitle_filter = (
                 f"[vpad]subtitles='{srt_escaped}':"
                 f"force_style='FontName=Noto Sans SC,FontSize=24',"
-                f"fontsdir='{font_escaped.parent}'[vout]"
+                f"fontsdir='{_escape_ffmpeg_path(Path(font).parent)}'[vout]"
             )
         else:
             subtitle_filter = f"[vpad]subtitles='{srt_escaped}'[vout]"
@@ -136,7 +149,7 @@ class FFmpegService:
         ]
 
         logger.info("FFmpeg 单镜合成: %s", " ".join(cmd))
-        subprocess.run(cmd, check=True, capture_output=True)
+        self._run_subprocess(cmd)
         return output_path
 
     def concat_clips(self, clip_paths: list[Path], output_path: Path) -> Path:
@@ -160,7 +173,7 @@ class FFmpegService:
         ]
 
         logger.info("FFmpeg 拼接成片: %s", " ".join(cmd))
-        subprocess.run(cmd, check=True, capture_output=True)
+        self._run_subprocess(cmd)
         return output_path
 
     def extract_last_frame(self, video_path: Path, output_image_path: Path) -> Path:
@@ -178,7 +191,7 @@ class FFmpegService:
             str(output_image_path),
         ]
         logger.info("FFmpeg 提取尾帧: %s", " ".join(cmd))
-        subprocess.run(cmd, check=True, capture_output=True)
+        self._run_subprocess(cmd)
         return output_image_path
 
     @staticmethod
@@ -243,7 +256,7 @@ class FFmpegService:
         ])
 
         logger.info("FFmpeg xfade 拼接: %s", " ".join(cmd))
-        subprocess.run(cmd, check=True, capture_output=True)
+        self._run_subprocess(cmd)
         return output_path
 
     def build_continuous_audio(self, audio_paths: list[Path], output_path: Path) -> Path:
@@ -272,7 +285,7 @@ class FFmpegService:
         ])
 
         logger.info("FFmpeg 连续旁白拼接: %s", " ".join(cmd))
-        subprocess.run(cmd, check=True, capture_output=True)
+        self._run_subprocess(cmd)
         return output_path
 
     def compose_shot_video_only(
@@ -301,13 +314,12 @@ class FFmpegService:
         ]
 
         font = self._font_path()
-        srt_escaped = _escape_subtitles_path(srt_path)
+        srt_escaped = _escape_ffmpeg_path(srt_path)
         if font:
-            font_escaped = _escape_subtitles_path(Path(font))
             subtitle_filter = (
                 f"[vpad]subtitles='{srt_escaped}':"
                 f"force_style='FontName=Noto Sans SC,FontSize=24',"
-                f"fontsdir='{font_escaped.parent}'[vout]"
+                f"fontsdir='{_escape_ffmpeg_path(Path(font).parent)}'[vout]"
             )
         else:
             subtitle_filter = f"[vpad]subtitles='{srt_escaped}'[vout]"
@@ -330,7 +342,7 @@ class FFmpegService:
         ]
 
         logger.info("FFmpeg 单镜无音轨合成: %s", " ".join(cmd))
-        subprocess.run(cmd, check=True, capture_output=True)
+        self._run_subprocess(cmd)
         return output_path
 
     def compose_final_with_continuous_audio(
@@ -360,7 +372,7 @@ class FFmpegService:
         ]
 
         logger.info("FFmpeg 成片混连续旁白: %s", " ".join(cmd))
-        subprocess.run(cmd, check=True, capture_output=True)
+        self._run_subprocess(cmd)
         return output_path
 
 
@@ -372,6 +384,7 @@ def _format_srt_time(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{ms:03d}"
 
 
-def _escape_subtitles_path(path: Path) -> str:
-    """转义 subtitles 滤镜路径中的特殊字符（Windows 兼容）。"""
-    return str(path.resolve()).replace("\\", "/").replace(":", "\\:")
+def _escape_ffmpeg_path(path: Path | str) -> str:
+    """转义 FFmpeg filter 中的路径特殊字符（Windows 兼容）。"""
+    text = str(Path(path).resolve()).replace("\\", "/")
+    return text.replace(":", "\\:").replace("'", "\\'")

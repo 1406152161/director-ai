@@ -5,7 +5,7 @@ import { memo } from 'react';
 import type { NovelChapterResponse } from '../../api/client';
 import { InlineSpinner } from '../Skeleton';
 import type { NovelBibleBeat } from '../../utils/novelBible';
-import { NOVEL_STATUS_LABEL } from '../../utils/novelLabels';
+import { chapterStatusLabel } from '../../utils/novelLabels';
 
 /** 安全解析章节校验问题 JSON，避免 malformed 数据导致页面崩溃。 */
 export function parseValidationIssues(raw: string | null | undefined): string[] {
@@ -85,7 +85,7 @@ export const ChapterReader = memo(function ChapterReader({
         </div>
       ) : (
         <p className="placeholder-hint">
-          本章{NOVEL_STATUS_LABEL[currentChapter.status] ?? '生成中'}…
+          本章{chapterStatusLabel(currentChapter.status)}…
         </p>
       )}
       {currentChapter.status === 'needs_review' && (

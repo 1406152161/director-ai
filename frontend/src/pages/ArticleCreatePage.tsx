@@ -23,7 +23,6 @@ function ArticleCreatePage() {
   const { data: health, isError: healthError } = useQuery({
     queryKey: ['health'],
     queryFn: fetchHealth,
-    retry: 1,
   });
 
   const createMutation = useMutation({

@@ -90,6 +90,14 @@ class Settings(BaseSettings):
     pgvector_enabled: bool = False
 
     @model_validator(mode="after")
+    def resolve_paths(self) -> "Settings":
+        for field in ("chroma_persist_dir", "outputs_dir"):
+            val = getattr(self, field)
+            if val and not Path(val).is_absolute():
+                setattr(self, field, str(_BACKEND_ROOT / val))
+        return self
+
+    @model_validator(mode="after")
     def check_jwt_secret(self) -> "Settings":
         # 启动时 fail-fast，避免生产误用默认密钥
         if self.auth_enabled and self.jwt_secret == "dev-change-me-in-production":

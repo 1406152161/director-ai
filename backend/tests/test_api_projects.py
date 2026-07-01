@@ -110,3 +110,16 @@ def test_delete_active_project_conflict(client, db_session):
     )
     resp = client.delete(f"/api/projects/{project.id}")
     assert resp.status_code == 409
+
+
+def test_delete_scripting_project_conflict(client, db_session):
+    from app.schemas.project import ProjectCreate
+    from app.services.project_service import ProjectService
+
+    svc = ProjectService(db_session)
+    project = svc.create_project(
+        ProjectCreate(story="脚本生成中", style="vlog", duration=15, aspect_ratio="9:16")
+    )
+    svc.update_status(project.id, "scripting", 10)
+    resp = client.delete(f"/api/projects/{project.id}")
+    assert resp.status_code == 409

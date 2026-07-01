@@ -36,7 +36,12 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
+@limiter.limit("10/minute")
+async def login(
+    request: Request,
+    body: LoginRequest,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
     if not get_settings().auth_enabled:
         raise HTTPException(status_code=503, detail="鉴权未启用")
     svc = AuthService(db)

@@ -115,6 +115,17 @@ function App() {
             <Route path="/article/:articleId" element={<ArticlePreviewPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/library" element={<LibraryPage />} />
+            <Route
+              path="*"
+              element={
+                <div className="page-error" style={{ textAlign: 'center', paddingTop: '100px' }}>
+                  <h2>页面不存在</h2>
+                  <Link to="/" className="btn-primary">
+                    返回首页
+                  </Link>
+                </div>
+              }
+            />
           </Routes>
         </main>
       </AppBootstrap>
