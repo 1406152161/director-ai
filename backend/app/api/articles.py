@@ -1,12 +1,13 @@
 # @author zhangzhihao
 """图文 API。"""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_auth_context, optional_owner_id
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.schemas.article import ArticleCreate, ArticleListItem, ArticleResponse
 from app.services.article_service import ArticleService
 
@@ -30,7 +31,9 @@ async def list_articles(
 
 
 @router.post("", response_model=ArticleResponse, status_code=201)
+@limiter.limit("5/minute")
 async def create_article(
+    request: Request,
     body: ArticleCreate,
     db: Session = Depends(get_db),
     ctx=Depends(get_auth_context),

@@ -2,16 +2,12 @@
 """图文创作 ORM（M4 占位）。"""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+from app.models.base import Base, _utcnow
 
 
 class Article(Base):

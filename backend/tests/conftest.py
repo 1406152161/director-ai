@@ -130,6 +130,17 @@ def _novel_chroma_dir(monkeypatch, tmp_path, request):
 
 
 @pytest.fixture(autouse=True)
+def _disable_rate_limit():
+    """集成测试高频调用 API，关闭 slowapi 限流。"""
+    from app.core.limiter import limiter
+
+    previous = limiter.enabled
+    limiter.enabled = False
+    yield
+    limiter.enabled = previous
+
+
+@pytest.fixture(autouse=True)
 def _reset_provider_cache():
     get_settings.cache_clear()
     clear_provider_cache()

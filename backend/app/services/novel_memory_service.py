@@ -63,11 +63,14 @@ def merge_bible_updates(bible: dict[str, Any], updates: dict[str, Any]) -> dict[
         merged["characters"] = list(existing.values())
 
     if "facts" in updates and updates["facts"]:
+        # set 去重 O(1)，保留最近 200 条避免 bible 膨胀
         facts = list(merged.get("facts", []))
+        seen = set(facts)
         for fact in updates["facts"]:
-            if fact and fact not in facts:
+            if fact and fact not in seen:
+                seen.add(fact)
                 facts.append(fact)
-        merged["facts"] = facts
+        merged["facts"] = facts[-200:]
 
     return merged
 
@@ -262,5 +265,5 @@ class NovelMemoryService:
         facts = list(bible.get("facts", []))
         if fact and fact not in facts:
             facts.append(fact)
-        bible["facts"] = facts
+        bible["facts"] = facts[-200:]
         return bible

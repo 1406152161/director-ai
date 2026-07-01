@@ -2,9 +2,14 @@
 """应用配置，从环境变量 / .env 读取。"""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+# 默认 SQLite 固定在 backend 根目录，避免 cwd 变化导致库文件漂移
+_DEFAULT_SQLITE = f"sqlite:///{(_BACKEND_ROOT / 'director_ai.db').as_posix()}"
 
 
 class Settings(BaseSettings):
@@ -68,8 +73,8 @@ class Settings(BaseSettings):
     outputs_dir: str = "outputs"
     ffmpeg_font_path: str = ""
 
-    # 数据库与队列
-    database_url: str = "sqlite:///./director_ai.db"
+    # 数据库与队列（默认 SQLite 路径相对 backend 根目录，避免 cwd 变化）
+    database_url: str = _DEFAULT_SQLITE
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"

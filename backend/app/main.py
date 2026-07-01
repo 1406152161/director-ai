@@ -8,10 +8,14 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api import articles, auth, health, novels, projects
 from app.core.config import get_settings
 from app.core.database import init_db
+from app.core.limiter import limiter
+from app.core.rate_limit import rate_limit_exceeded_handler
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -35,6 +39,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

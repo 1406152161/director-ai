@@ -1,12 +1,13 @@
 # @author zhangzhihao
 """鉴权 API。"""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_auth_context
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models.user import Tenant
 from app.schemas.auth import AuthUserResponse, LoginRequest, RegisterRequest, TokenResponse
 from app.services.auth_service import AuthService
@@ -15,7 +16,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-async def register(body: RegisterRequest, db: Session = Depends(get_db)) -> TokenResponse:
+@limiter.limit("5/minute")  # 防刷注册
+async def register(
+    request: Request,
+    body: RegisterRequest,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
     if not get_settings().auth_enabled:
         raise HTTPException(status_code=503, detail="鉴权未启用")
     svc = AuthService(db)

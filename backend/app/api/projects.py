@@ -1,13 +1,14 @@
 # @author zhangzhihao
 """项目 API 路由。"""
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_auth_context, optional_owner_id
 from app.api.streaming import progress_event_response
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.schemas.project import ProjectCreate, ProjectListItem, ProjectResponse
 from app.services.task_dispatch import enqueue_video_generation
 from app.services.project_service import ProjectService
@@ -34,7 +35,9 @@ async def list_projects(
 
 
 @router.post("", response_model=ProjectResponse, status_code=201)
+@limiter.limit("3/minute")
 async def create_project(
+    request: Request,
     body: ProjectCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),

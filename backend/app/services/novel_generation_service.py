@@ -23,7 +23,7 @@ from app.services.novel_memory_service import (
 from app.services.novel_outline_service import NovelOutlineService
 from app.services.novel_plan_service import NovelPlanService, l2_expand_range
 from app.services.novel_postwrite_service import NovelPostwriteService, get_plant_snippets
-from app.services.novel_service import NovelService
+from app.services.novel_service import MAX_OUTLINE_INLINE_ITEMS, NovelService
 from app.services.novel_validate_service import NovelValidateService
 from app.services.novel_write_service import NovelWriteService
 
@@ -90,7 +90,9 @@ async def _ensure_l2_for_range(
     bible["meta"] = meta
     novel_svc.save_bible(novel_id, bible)
     bible_sync = dict(bible)
-    bible_sync["outline"] = outline_svc.to_bible_outline(novel_id, 1, min(total, 500))
+    bible_sync["outline"] = outline_svc.to_bible_outline(
+        novel_id, 1, min(total, MAX_OUTLINE_INLINE_ITEMS)
+    )
     framework_svc.sync_from_bible(novel_id, bible_sync)
 
 

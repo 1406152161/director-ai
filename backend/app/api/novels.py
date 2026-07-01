@@ -3,7 +3,7 @@
 
 from urllib.parse import quote
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from app.api.deps import get_auth_context, optional_owner_id
 from app.api.streaming import progress_event_response
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.schemas.novel import (
     NovelBiblePatch,
     NovelChatRequest,
@@ -63,7 +64,9 @@ async def list_novels(
 
 
 @router.post("", response_model=NovelResponse, status_code=201)
+@limiter.limit("3/minute")
 async def create_novel(
+    request: Request,
     body: NovelCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -167,7 +170,9 @@ async def retry_novel_plan(
 
 
 @router.post("/{novel_id}/chapters/next", response_model=NovelResponse)
+@limiter.limit("3/minute")
 async def continue_novel(
+    request: Request,
     novel_id: str,
     body: NovelWriteRequest,
     background_tasks: BackgroundTasks,
@@ -192,7 +197,9 @@ async def continue_novel(
 
 
 @router.post("/{novel_id}/start-writing", response_model=NovelResponse)
+@limiter.limit("3/minute")
 async def start_writing_novel(
+    request: Request,
     novel_id: str,
     body: NovelWriteRequest,
     background_tasks: BackgroundTasks,

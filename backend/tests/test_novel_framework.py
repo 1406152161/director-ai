@@ -27,3 +27,29 @@ def test_sync_and_query_hybrid(db_session, sample_bible):
     results = svc.query_hybrid(novel.id, "第1章 开篇", 1)
     assert results
     assert any("大纲" in r or "开篇" in r for r in results)
+
+
+def test_sync_from_bible_idempotent(db_session, sample_bible):
+    """重复 sync 相同 bible 不应膨胀行数。"""
+    from app.models.novel import Novel
+    from app.models.novel_framework_item import NovelFrameworkItem
+
+    novel = Novel(premise="测试", genre="xuanhuan", status="planned")
+    db_session.add(novel)
+    db_session.commit()
+
+    svc = NovelFrameworkService(db_session)
+    svc.sync_from_bible(novel.id, sample_bible)
+    count_first = (
+        db_session.query(NovelFrameworkItem)
+        .filter(NovelFrameworkItem.novel_id == novel.id)
+        .count()
+    )
+    svc.sync_from_bible(novel.id, sample_bible)
+    count_second = (
+        db_session.query(NovelFrameworkItem)
+        .filter(NovelFrameworkItem.novel_id == novel.id)
+        .count()
+    )
+    assert count_first > 0
+    assert count_second == count_first

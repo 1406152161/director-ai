@@ -2,16 +2,12 @@
 """小说框架记忆条目 ORM（大纲/伏笔/规则等）。"""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+from app.models.base import Base, _utcnow
 
 
 class NovelFrameworkItem(Base):

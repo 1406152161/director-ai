@@ -21,7 +21,42 @@ class NovelFrameworkService:
         self._memory = memory_svc or NovelMemoryService()
 
     def sync_from_bible(self, novel_id: str, bible: dict[str, Any]) -> None:
-        self._db.query(NovelFrameworkItem).filter(NovelFrameworkItem.novel_id == novel_id).delete()
+        """增量 upsert framework_items，仅变更条目写 Chroma。"""
+        desired = self._items_from_bible(novel_id, bible)
+        desired_map = {(item.item_type, item.item_key): item for item in desired}
+
+        existing_rows = (
+            self._db.query(NovelFrameworkItem)
+            .filter(NovelFrameworkItem.novel_id == novel_id)
+            .all()
+        )
+        existing_map = {(row.item_type, row.item_key): row for row in existing_rows}
+
+        changed_for_chroma: list[NovelFrameworkItem] = []
+        deleted_keys: list[str] = []
+
+        for key, new_item in desired_map.items():
+            old = existing_map.get(key)
+            if old is None:
+                self._db.add(new_item)
+                changed_for_chroma.append(new_item)
+            elif self._item_content_tuple(old) != self._item_content_tuple(new_item):
+                self._copy_item_fields(old, new_item)
+                changed_for_chroma.append(old)
+
+        for key, old in existing_map.items():
+            if key not in desired_map:
+                deleted_keys.append(old.item_key)
+                self._db.delete(old)
+
+        self._db.commit()
+
+        if changed_for_chroma:
+            self._index_to_chroma(novel_id, changed_for_chroma)
+        if deleted_keys:
+            self._delete_from_chroma(novel_id, deleted_keys)
+
+    def _items_from_bible(self, novel_id: str, bible: dict[str, Any]) -> list[NovelFrameworkItem]:
         items: list[NovelFrameworkItem] = []
 
         if bible.get("world"):
@@ -80,10 +115,31 @@ class NovelFrameworkService:
                 ol.get("title", ""), ol.get("summary", ""), text,
             ))
 
-        for item in items:
-            self._db.add(item)
-        self._db.commit()
-        self._index_to_chroma(novel_id, items)
+        return items
+
+    @staticmethod
+    def _item_content_tuple(item: NovelFrameworkItem) -> tuple:
+        return (
+            item.scope,
+            item.chapter_index,
+            item.chapter_from,
+            item.chapter_to,
+            item.title,
+            item.content,
+            item.text_for_embed,
+            item.status,
+        )
+
+    @staticmethod
+    def _copy_item_fields(target: NovelFrameworkItem, source: NovelFrameworkItem) -> None:
+        target.scope = source.scope
+        target.chapter_index = source.chapter_index
+        target.chapter_from = source.chapter_from
+        target.chapter_to = source.chapter_to
+        target.title = source.title
+        target.content = source.content
+        target.text_for_embed = source.text_for_embed
+        target.status = source.status
 
     @staticmethod
     def _mk(
@@ -130,6 +186,19 @@ class NovelFrameworkService:
             })
         collection.upsert(ids=ids, documents=docs, metadatas=metas)
         logger.info("Framework Chroma 索引 novel=%s count=%s", novel_id, len(ids))
+
+    def _delete_from_chroma(self, novel_id: str, item_keys: list[str]) -> None:
+        if not item_keys:
+            return
+        client = self._memory._ensure_client()
+        name = f"novel_{novel_id}_framework"
+        emb = self._memory.embedding_function()
+        try:
+            collection = client.get_collection(name=name, embedding_function=emb)
+            collection.delete(ids=item_keys)
+            logger.info("Framework Chroma 删除 novel=%s count=%s", novel_id, len(item_keys))
+        except Exception as exc:
+            logger.debug("Framework Chroma 删除跳过: %s", exc)
 
     def query_hybrid(
         self,

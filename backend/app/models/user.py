@@ -2,16 +2,12 @@
 """用户与租户 ORM。"""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+from app.models.base import Base, _utcnow
 
 
 class Tenant(Base):

@@ -2,16 +2,12 @@
 """项目与分镜镜头 ORM 模型。"""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+from app.models.base import Base, _utcnow
 
 
 class Project(Base):

@@ -2,16 +2,12 @@
 """章级大纲条目 ORM（L1 骨架 + L2 详细）。"""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+from app.models.base import Base, _utcnow
 
 
 class NovelOutlineItem(Base):

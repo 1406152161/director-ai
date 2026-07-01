@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger(__name__)
 
+# 内联大纲/API 响应中 outline 条目上限，超过则标记 outline_truncated
+MAX_OUTLINE_INLINE_ITEMS = 500
+
 from app.models.novel import Novel, NovelChapter
 from app.novel.prompts import VALID_GENRES, genre_label
 from app.schemas.novel import NovelCreate, NovelListItem, NovelResponse, NovelChapterResponse
@@ -299,7 +302,7 @@ class NovelService:
         total = int(meta.get("total_chapters") or 0)
         bible_for_sync = dict(bible)
         bible_for_sync["outline"] = outline_svc.to_bible_outline(
-            novel_id, 1, min(total, 500)
+            novel_id, 1, min(total, MAX_OUTLINE_INLINE_ITEMS)
         )
         memory_svc = NovelMemoryService()
         NovelEntityService(self._db).seed_from_bible(novel_id, bible_for_sync)
@@ -384,7 +387,7 @@ class NovelService:
         memory_svc = NovelMemoryService()
         bible_for_sync = dict(bible)
         bible_for_sync["outline"] = outline_svc.to_bible_outline(
-            novel_id, 1, min(int(meta["total_chapters"]), 500)
+            novel_id, 1, min(int(meta["total_chapters"]), MAX_OUTLINE_INLINE_ITEMS)
         )
         NovelEntityService(self._db).seed_from_bible(novel_id, bible_for_sync)
         NovelFrameworkService(self._db, memory_svc).sync_from_bible(novel_id, bible_for_sync)
@@ -406,7 +409,7 @@ class NovelService:
         bible = dict(bible)
         meta = bible.setdefault("meta", {})
         outline_svc = NovelOutlineService(self._db)
-        total = int(meta.get("total_chapters") or 500)
+        total = int(meta.get("total_chapters") or MAX_OUTLINE_INLINE_ITEMS)
 
         inline_outline = bible.get("outline") or []
         if inline_outline:
@@ -422,7 +425,7 @@ class NovelService:
         memory_svc = NovelMemoryService()
         bible_for_sync = dict(bible)
         bible_for_sync["outline"] = outline_svc.to_bible_outline(
-            novel_id, 1, min(total, 500)
+            novel_id, 1, min(total, MAX_OUTLINE_INLINE_ITEMS)
         )
         NovelEntityService(self._db).seed_from_bible(novel_id, bible_for_sync)
         NovelFrameworkService(self._db, memory_svc).sync_from_bible(novel_id, bible_for_sync)
@@ -596,10 +599,20 @@ class NovelService:
             return bible
         from app.services.novel_outline_service import NovelOutlineService
 
-        total = int(bible.get("meta", {}).get("total_chapters") or 500)
-        return NovelOutlineService(self._db).merge_into_bible(
-            bible, novel_id, max_items=min(total, 500)
+        total = int(bible.get("meta", {}).get("total_chapters") or MAX_OUTLINE_INLINE_ITEMS)
+        merged = NovelOutlineService(self._db).merge_into_bible(
+            bible, novel_id, max_items=min(total, MAX_OUTLINE_INLINE_ITEMS)
         )
+        return self._apply_outline_truncation_meta(merged, total)
+
+    @staticmethod
+    def _apply_outline_truncation_meta(bible: dict, total: int) -> dict:
+        """全书章数超过内联上限时标记截断，供前端提示分页拉取。"""
+        result = dict(bible)
+        if total > MAX_OUTLINE_INLINE_ITEMS:
+            result["outline_truncated"] = True
+            result["outline_total"] = total
+        return result
 
     _ACTIVE_STATUSES = frozenset({"pending", "planning", "writing"})
 
