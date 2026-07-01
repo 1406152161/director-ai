@@ -3,6 +3,7 @@
  */
 import { memo } from 'react';
 import { StatusBadge } from '../StatusBadge';
+import { InlineSpinner } from '../Skeleton';
 import { formatPlanningProgress, type NovelBible } from '../../utils/novelBible';
 import { GENRE_LABEL, novelStatusLabel } from '../../utils/novelLabels';
 
@@ -90,7 +91,7 @@ export const PlanningProgress = memo(function PlanningProgress({
             disabled={retryPlanPending}
             onClick={onRetryPlan}
           >
-            {retryPlanPending ? '提交中…' : '续跑规划'}
+            {retryPlanPending ? <InlineSpinner label="提交中…" /> : '续跑规划'}
           </button>
         </div>
       )}

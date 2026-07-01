@@ -1539,10 +1539,17 @@
     display: flex;
   }
 
-  .library-grid,
-  .hub-recent-grid,
-  .hub-progress-grid {
+  .hub-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-meta {
+    flex-wrap: wrap;
+  }
+
+  .hub-recent-item,
+  .hub-in-progress-item {
+    flex-wrap: wrap;
   }
 
   .novel-workbench-layout {
@@ -1571,10 +1578,12 @@
 }
 
 @media (max-width: 480px) {
-  .library-grid,
-  .hub-recent-grid,
-  .hub-progress-grid {
+  .hub-grid {
     grid-template-columns: 1fr;
+  }
+
+  .project-meta .status {
+    margin-left: 0;
   }
 
   body {

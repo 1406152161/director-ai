@@ -3,6 +3,7 @@
  */
 import { memo } from 'react';
 import type { NovelChapterResponse } from '../../api/client';
+import { InlineSpinner } from '../Skeleton';
 import type { NovelBibleBeat } from '../../utils/novelBible';
 import { NOVEL_STATUS_LABEL } from '../../utils/novelLabels';
 
@@ -101,7 +102,7 @@ export const ChapterReader = memo(function ChapterReader({
             disabled={approvePending || rewritePending || isBusy}
             onClick={onApprove}
           >
-            {approvePending ? '处理中…' : '确认放行本章'}
+            {approvePending ? <InlineSpinner label="处理中…" /> : '确认放行本章'}
           </button>
           <button
             type="button"
@@ -109,7 +110,7 @@ export const ChapterReader = memo(function ChapterReader({
             disabled={approvePending || rewritePending || isBusy}
             onClick={onRewrite}
           >
-            {rewritePending ? '重写中…' : '重写本章'}
+            {rewritePending ? <InlineSpinner label="重写中…" /> : '重写本章'}
           </button>
         </div>
       )}

@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { createNovel, fetchHealth } from '../api/client';
+import { InlineSpinner } from '../components/Skeleton';
 import { useToastStore } from '../store/useToastStore';
 
 const GENRE_OPTIONS = [
@@ -135,7 +136,7 @@ function NovelCreatePage() {
           className="btn-primary"
           disabled={createMutation.isPending || healthError || !premiseTrimmed}
         >
-          {createMutation.isPending ? '提交中…' : '生成整本规划'}
+          {createMutation.isPending ? <InlineSpinner label="提交中…" /> : '生成整本规划'}
         </button>
         {createMutation.isError && (
           <p className="form-error" role="alert">

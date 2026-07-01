@@ -80,3 +80,18 @@
     transform: translateX(0);
   }
 }
+
+.toast.toast-leaving {
+  animation: toast-out 0.2s ease-in forwards;
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+}

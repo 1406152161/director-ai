@@ -3,17 +3,7 @@
  */
 import { memo } from 'react';
 import { exportNovelUrl } from '../../api/client';
-
-function firstMutationError(
-  ...mutations: Array<{ isError: boolean; error: unknown }>
-): string | null {
-  for (const m of mutations) {
-    if (m.isError) {
-      return (m.error as Error)?.message ?? '操作失败';
-    }
-  }
-  return null;
-}
+import { InlineSpinner } from '../Skeleton';
 
 export type NovelWorkbenchFooterProps = {
   novelId: string;
@@ -31,7 +21,6 @@ export type NovelWorkbenchFooterProps = {
   onCloseConfirmModal: () => void;
   onStartWriting: () => void;
   startWritingPending: boolean;
-  mutations: Array<{ isError: boolean; error: unknown }>;
 };
 
 export const NovelWorkbenchFooter = memo(function NovelWorkbenchFooter({
@@ -50,18 +39,10 @@ export const NovelWorkbenchFooter = memo(function NovelWorkbenchFooter({
   onCloseConfirmModal,
   onStartWriting,
   startWritingPending,
-  mutations,
 }: NovelWorkbenchFooterProps) {
-  const footerMutationError = firstMutationError(...mutations);
-
   return (
     <>
       <footer className="novel-workbench-footer">
-        {footerMutationError && (
-          <p className="form-error footer-mutation-error" role="alert">
-            {footerMutationError}
-          </p>
-        )}
         {isPlanned && (
           <button type="button" className="btn-primary" disabled={isBusy} onClick={onConfirmPlan}>
             确认规划，开始写作
@@ -85,7 +66,7 @@ export const NovelWorkbenchFooter = memo(function NovelWorkbenchFooter({
               disabled={isBusy || needsReview || continuePending}
               onClick={onContinueWrite}
             >
-              {continuePending ? '提交中…' : '开始续写'}
+              {continuePending ? <InlineSpinner label="提交中…" /> : '开始续写'}
             </button>
           </div>
         )}
@@ -101,7 +82,7 @@ export const NovelWorkbenchFooter = memo(function NovelWorkbenchFooter({
           disabled={isBusy || isPlanned || replanPending}
           onClick={onReplan}
         >
-          {replanPending ? '调整中…' : '调整后续大纲'}
+          {replanPending ? <InlineSpinner label="调整中…" /> : '调整后续大纲'}
         </button>
       </footer>
 
@@ -131,7 +112,7 @@ export const NovelWorkbenchFooter = memo(function NovelWorkbenchFooter({
                 disabled={startWritingPending}
                 onClick={onStartWriting}
               >
-                {startWritingPending ? '提交中…' : '开始写作'}
+                {startWritingPending ? <InlineSpinner label="提交中…" /> : '开始写作'}
               </button>
             </div>
           </div>

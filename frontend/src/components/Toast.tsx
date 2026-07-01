@@ -20,7 +20,7 @@ export function ToastContainer() {
   return (
     <div className="toast-container" aria-live="polite">
       {toasts.map((toast) => (
-        <div key={toast.id} className={`toast toast-${toast.type}`} role="alert">
+        <div key={toast.id} className={`toast toast-${toast.type}${toast.leaving ? ' toast-leaving' : ''}`} role="alert">
           <span className="toast-type">{TYPE_LABEL[toast.type]}</span>
           <span className="toast-message">{toast.message}</span>
           <button
